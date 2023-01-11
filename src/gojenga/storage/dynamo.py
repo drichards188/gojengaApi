@@ -2,37 +2,60 @@ import logging
 
 import boto3
 from botocore.exceptions import ClientError
+from opentelemetry import trace
 
 dyn_resource = boto3.resource('dynamodb')
 logger = logging.getLogger(__name__)
+tracer = trace.get_tracer(__name__)
 
 
 def get_item(table_name: str, key: str, value: str):
-    try:
-        table = dyn_resource.Table(table_name)
-        response = table.get_item(Key={key: value})
+    with tracer.start_as_current_span("get_item"):
+        try:
+            table = dyn_resource.Table(table_name)
+            response = table.get_item(Key={key: value})
 
-        if 'item' in response:
-            return response['Item']
-        else:
-            logger.error('item not found')
-            raise ValueError('item not found')
-    except ClientError as e:
-        logger.error(
-            f"{e.response['Error']['Code'], e.response['Error']['Message']}")
-        raise Exception(f"dynamo error {e.response['Error']['Code']} and msg {e.response['Error']['Message']}")
+            if 'Item' in response:
+                return response['Item']
+            else:
+                logger.error('item not found')
+                raise ValueError('item not found')
+        except ClientError as e:
+            logger.error(
+                f"{e.response['Error']['Code'], e.response['Error']['Message']}")
+            raise Exception(f"dynamo error {e.response['Error']['Code']} and msg {e.response['Error']['Message']}")
 
 
-# todo how to add multiple key value pairs
 def create_item(table_name: str, item: dict) -> str:
+    with tracer.start_as_current_span("create_item"):
+        try:
+            table = dyn_resource.Table(table_name)
+            response = table.put_item(
+                Item=item
+            )
+            return 'insert item success'
+        except ClientError as e:
+            logger.error(
+                f"{e.response['Error']['Code'], e.response['Error']['Message']}")
+            raise Exception(f"dynamo error {e.response['Error']['Code']} and msg {e.response['Error']['Message']}")
 
-    try:
-        table = dyn_resource.Table(table_name)
-        response = table.put_item(
-            Item=item
-        )
-        return 'insert item success'
-    except ClientError as e:
-        logger.error(
-            f"{e.response['Error']['Code'], e.response['Error']['Message']}")
-        raise Exception(f"dynamo error {e.response['Error']['Code']} and msg {e.response['Error']['Message']}")
+
+# todo create a general update user function
+def update_user_password(table_name: str, item: dict) -> str:
+    with tracer.start_as_current_span("create_item"):
+        name = item["name"]
+        password = item["password"]
+        try:
+            table = dyn_resource.Table(table_name)
+            response = table.update_item(
+                Key={'name': name},
+                UpdateExpression="set password=:p",
+                ExpressionAttributeValues={
+                    ':p': password},
+                ReturnValues="UPDATED_NEW")
+            print(response)
+            return 'update item success'
+        except ClientError as e:
+            logger.error(
+                f"{e.response['Error']['Code'], e.response['Error']['Message']}")
+            raise Exception(f"dynamo error {e.response['Error']['Code']} and msg {e.response['Error']['Message']}")
