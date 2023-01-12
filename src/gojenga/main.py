@@ -1,6 +1,6 @@
 import logging.config
 
-from fastapi import FastAPI, HTTPException, status, Request
+from fastapi import FastAPI, HTTPException, status, Request, APIRouter
 from opentelemetry import trace
 from opentelemetry.exporter.jaeger.thrift import JaegerExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
@@ -10,7 +10,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 from models.User import User
-from user.handler import handle_get_user, handle_create_user, handle_update_user, handle_delete_user
+from user.handler import UserHandler
 
 trace.set_tracer_provider(
     TracerProvider(
@@ -44,11 +44,6 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 
 
-@app.get("/")
-async def get_root():
-    return {"msg": "Hello World"}
-
-
 @app.get("/user/{username}")
 async def get_user(request: Request, username: str):
     with tracer.start_as_current_span(
@@ -57,7 +52,7 @@ async def get_user(request: Request, username: str):
             kind=trace.SpanKind.SERVER
     ):
         try:
-            user = handle_get_user(username)
+            user = UserHandler.handle_get_user(username)
             return {"response": user}
         except Exception as e:
             logger.error(e)
@@ -72,7 +67,7 @@ async def post_user(request: Request, data: User):
             kind=trace.SpanKind.SERVER
     ):
         try:
-            resp = handle_create_user(data.name, data.password)
+            resp = UserHandler.handle_create_user(data.name, data.password)
             return {"response": resp}
         except Exception as e:
             logger.error(e)
@@ -87,7 +82,7 @@ async def put_user(request: Request, username: str, data: User):
             kind=trace.SpanKind.SERVER
     ):
         try:
-            resp = handle_update_user(username, data.password)
+            resp = UserHandler.handle_update_user(username, data.password)
             return {"response": resp}
         except Exception as e:
             logger.error(e)
@@ -102,14 +97,11 @@ async def delete_user(request: Request, username: str):
             kind=trace.SpanKind.SERVER
     ):
         try:
-            resp = handle_delete_user(username)
+            resp = UserHandler.handle_delete_user(username)
             return {"response": resp}
         except Exception as e:
             logger.error(e)
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
-
-# todo test endpoints
 
 # todo create delete endpoint
 

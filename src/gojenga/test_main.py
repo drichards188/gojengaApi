@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
 from main import app
-from user.handler import handle_delete_user, handle_create_user
+from user.handler import UserHandler
 
 client = TestClient(app)
 
@@ -23,7 +23,7 @@ def test_update_user():
 
 
 def test_delete_user():
-    resp = handle_create_user('zala', '5821')
+    resp = UserHandler.handle_create_user('zala', '5821')
     assert resp == "insert item success"
     response = client.delete("/user/zala")
     assert response.json() == {"response": "delete item success"}
