@@ -1,6 +1,6 @@
 import logging.config
 
-from fastapi import FastAPI, HTTPException, status, Request, APIRouter
+from fastapi import FastAPI, HTTPException, status, Request, APIRouter, Depends, Header
 from opentelemetry import trace
 from opentelemetry.exporter.jaeger.thrift import JaegerExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
@@ -11,6 +11,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 from models.User import User
 from user.handler import UserHandler
+from common.lib import lib
 
 trace.set_tracer_provider(
     TracerProvider(
@@ -45,29 +46,32 @@ app = FastAPI()
 
 
 @app.get("/user/{username}")
-async def get_user(request: Request, username: str):
+async def get_user(request: Request, username: str, is_test: bool | None = Header(default=False)):
     with tracer.start_as_current_span(
             "server_request",
             context=extract(request.headers),
             kind=trace.SpanKind.SERVER
     ):
-        try:
-            user = UserHandler.handle_get_user(username)
-            return {"response": user}
-        except Exception as e:
-            logger.error(e)
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        if not lib.detect_special_characters(username):
+            try:
+                user = UserHandler.handle_get_user(username, is_test)
+                return {"response": user}
+            except Exception as e:
+                logger.error(e)
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        else:
+            raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
 
 
 @app.post("/user")
-async def post_user(request: Request, data: User):
+async def post_user(request: Request, data: User, is_test: bool | None = Header(default=False)):
     with tracer.start_as_current_span(
             "server_request",
             context=extract(request.headers),
             kind=trace.SpanKind.SERVER
     ):
         try:
-            resp = UserHandler.handle_create_user(data.name, data.password)
+            resp = UserHandler.handle_create_user(data.name, data.password, is_test)
             return {"response": resp}
         except Exception as e:
             logger.error(e)
@@ -75,34 +79,38 @@ async def post_user(request: Request, data: User):
 
 
 @app.put("/user/{username}")
-async def put_user(request: Request, username: str, data: User):
+async def put_user(request: Request, username: str, data: User, is_test: bool | None = Header(default=False)):
     with tracer.start_as_current_span(
             "server_request",
             context=extract(request.headers),
             kind=trace.SpanKind.SERVER
     ):
-        try:
-            resp = UserHandler.handle_update_user(username, data.password)
-            return {"response": resp}
-        except Exception as e:
-            logger.error(e)
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        if not lib.detect_special_characters(username):
+            try:
+                resp = UserHandler.handle_update_user(username, data.password, is_test)
+                return {"response": resp}
+            except Exception as e:
+                logger.error(e)
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        else:
+            raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
 
 
 @app.delete("/user/{username}")
-async def delete_user(request: Request, username: str):
+async def delete_user(request: Request, username: str, is_test: bool | None = Header(default=False)):
     with tracer.start_as_current_span(
             "server_request",
             context=extract(request.headers),
             kind=trace.SpanKind.SERVER
     ):
-        try:
-            resp = UserHandler.handle_delete_user(username)
-            return {"response": resp}
-        except Exception as e:
-            logger.error(e)
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
-# todo create delete endpoint
+        if not lib.detect_special_characters(username):
+            try:
+                resp = UserHandler.handle_delete_user(username, is_test)
+                return {"response": resp}
+            except Exception as e:
+                logger.error(e)
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        else:
+            raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
 
 FastAPIInstrumentor.instrument_app(app)
