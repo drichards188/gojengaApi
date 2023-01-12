@@ -52,15 +52,15 @@ async def get_user(request: Request, username: str, is_test: bool | None = Heade
             context=extract(request.headers),
             kind=trace.SpanKind.SERVER
     ):
-        if not lib.detect_special_characters(username):
-            try:
-                user = UserHandler.handle_get_user(username, is_test)
-                return {"response": user}
-            except Exception as e:
-                logger.error(e)
-                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-        else:
+        if lib.detect_special_characters(username):
             raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
+        try:
+            user = UserHandler.handle_get_user(username, is_test)
+            return {"response": user}
+        except Exception as e:
+            logger.error(e)
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
 
 
 @app.post("/user")
@@ -71,6 +71,9 @@ async def post_user(request: Request, data: User, is_test: bool | None = Header(
             kind=trace.SpanKind.SERVER
     ):
         try:
+            if lib.detect_special_characters(data.name):
+                raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
+
             resp = UserHandler.handle_create_user(data.name, data.password, is_test)
             return {"response": resp}
         except Exception as e:
@@ -85,15 +88,15 @@ async def put_user(request: Request, username: str, data: User, is_test: bool | 
             context=extract(request.headers),
             kind=trace.SpanKind.SERVER
     ):
-        if not lib.detect_special_characters(username):
-            try:
-                resp = UserHandler.handle_update_user(username, data.password, is_test)
-                return {"response": resp}
-            except Exception as e:
-                logger.error(e)
-                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-        else:
+        if lib.detect_special_characters(username):
             raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
+        try:
+            resp = UserHandler.handle_update_user(username, data.password, is_test)
+            return {"response": resp}
+        except Exception as e:
+            logger.error(e)
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
 
 
 @app.delete("/user/{username}")
@@ -103,14 +106,14 @@ async def delete_user(request: Request, username: str, is_test: bool | None = He
             context=extract(request.headers),
             kind=trace.SpanKind.SERVER
     ):
-        if not lib.detect_special_characters(username):
-            try:
-                resp = UserHandler.handle_delete_user(username, is_test)
-                return {"response": resp}
-            except Exception as e:
-                logger.error(e)
-                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-        else:
+        if lib.detect_special_characters(username):
             raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
+        try:
+            resp = UserHandler.handle_delete_user(username, is_test)
+            return {"response": resp}
+        except Exception as e:
+            logger.error(e)
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
 
 FastAPIInstrumentor.instrument_app(app)
