@@ -2,6 +2,8 @@
 
 ## Utilizing fastApi to power Gojenga
 
+[![Gojenga](https://circleci.com/gh/drichards188/gojengaApi.svg?style=svg)](https://github.com/drichards188/gojengaApi)
+
 ### Architecture
 
 User Type
