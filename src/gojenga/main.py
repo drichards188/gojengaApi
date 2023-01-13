@@ -62,7 +62,6 @@ async def get_user(request: Request, username: str, is_test: bool | None = Heade
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-
 @app.post("/user")
 async def post_user(request: Request, data: User, is_test: bool | None = Header(default=False)):
     with tracer.start_as_current_span(
@@ -96,7 +95,6 @@ async def put_user(request: Request, username: str, data: User, is_test: bool | 
         except Exception as e:
             logger.error(e)
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
 
 
 @app.delete("/user/{username}")
