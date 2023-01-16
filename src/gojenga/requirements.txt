@@ -1,0 +1,8 @@
+boto3==1.26.49
+uvicorn==0.20.0
+botocore==1.29.49
+fastapi==0.89.1
+pydantic==1.10.4
+opentelemetry-distro==0.36b0
+opentelemetry-exporter-jaeger-thrift==1.15.0
+opentelemetry-instrumentation-fastapi==0.36b0
