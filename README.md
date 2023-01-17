@@ -7,8 +7,18 @@
 ### Architecture
 
 User Type
+
 name: str
+
 password: str | None = None
+
+### Test Flag
+
+Headers:
+
+**Is-Test: True**
+
+_____
 
 *get user information* 
 GET /user/{username}

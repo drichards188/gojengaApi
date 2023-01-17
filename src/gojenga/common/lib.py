@@ -1,7 +1,7 @@
 import curses.ascii
 
 
-class lib:
+class Lib:
     @staticmethod
     def detect_special_characters(block: str) -> bool:
         if any(not c.isalnum() for c in block):

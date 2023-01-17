@@ -12,7 +12,9 @@ tracer = trace.get_tracer(__name__)
 class Dynamo:
     @staticmethod
     def get_item(table_name: str, key: str, value: str):
-        with tracer.start_as_current_span("get_item"):
+        with tracer.start_as_current_span(
+                "get_item",
+                attributes={'attr.table_name': table_name, 'attr.key': key, 'attr.value': value}):
             try:
                 table = dyn_resource.Table(table_name)
                 response = table.get_item(Key={key: value})
@@ -29,7 +31,9 @@ class Dynamo:
 
     @staticmethod
     def create_item(table_name: str, item: dict) -> str:
-        with tracer.start_as_current_span("create_item"):
+        with tracer.start_as_current_span(
+                "create_item",
+                attributes={'table_name': table_name}):
             try:
                 table = dyn_resource.Table(table_name)
                 response = table.put_item(
@@ -43,7 +47,9 @@ class Dynamo:
 
     @staticmethod
     def delete_item(table_name: str, item: dict) -> str:
-        with tracer.start_as_current_span("delete_item"):
+        with tracer.start_as_current_span(
+                "delete_item",
+                attributes={'table_name': table_name}):
             try:
                 table = dyn_resource.Table(table_name)
                 response = table.delete_item(
@@ -58,7 +64,9 @@ class Dynamo:
     # todo create a general update user function
     @staticmethod
     def update_user_password(table_name: str, item: dict) -> str:
-        with tracer.start_as_current_span("update_item"):
+        with tracer.start_as_current_span(
+                "update_item",
+                attributes={'attr.table_name': table_name}):
             name = item["name"]
             password = item["password"]
             try:
