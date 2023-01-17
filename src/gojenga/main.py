@@ -11,7 +11,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 from models.User import User
 from user.handler import UserHandler
-from common.lib import lib
+from common.lib import Lib
 
 trace.set_tracer_provider(
     TracerProvider(
@@ -50,9 +50,10 @@ async def get_user(request: Request, username: str, is_test: bool | None = Heade
     with tracer.start_as_current_span(
             "server_request",
             context=extract(request.headers),
+            attributes={'attr.username': username, 'attr.is_test': is_test},
             kind=trace.SpanKind.SERVER
     ):
-        if lib.detect_special_characters(username):
+        if Lib.detect_special_characters(username):
             raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
         try:
             user = UserHandler.handle_get_user(username, is_test)
@@ -67,10 +68,11 @@ async def post_user(request: Request, data: User, is_test: bool | None = Header(
     with tracer.start_as_current_span(
             "server_request",
             context=extract(request.headers),
+            attributes={'attr.username': data.name, 'attr.is_test': is_test},
             kind=trace.SpanKind.SERVER
     ):
         try:
-            if lib.detect_special_characters(data.name):
+            if Lib.detect_special_characters(data.name):
                 raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
 
             resp = UserHandler.handle_create_user(data.name, data.password, is_test)
@@ -85,9 +87,10 @@ async def put_user(request: Request, username: str, data: User, is_test: bool | 
     with tracer.start_as_current_span(
             "server_request",
             context=extract(request.headers),
+            attributes={'username': username, 'attr.is_test': is_test},
             kind=trace.SpanKind.SERVER
     ):
-        if lib.detect_special_characters(username):
+        if Lib.detect_special_characters(username):
             raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
         try:
             resp = UserHandler.handle_update_user(username, data.password, is_test)
@@ -102,9 +105,10 @@ async def delete_user(request: Request, username: str, is_test: bool | None = He
     with tracer.start_as_current_span(
             "server_request",
             context=extract(request.headers),
+            attributes={'username': username, 'is_test': is_test},
             kind=trace.SpanKind.SERVER
     ):
-        if lib.detect_special_characters(username):
+        if Lib.detect_special_characters(username):
             raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
         try:
             resp = UserHandler.handle_delete_user(username, is_test)
