@@ -1,6 +1,7 @@
 import logging.config
 
-from fastapi import FastAPI, HTTPException, status, Request, APIRouter, Depends, Header
+from opentelemetry.metrics import get_meter
+from fastapi import FastAPI, HTTPException, status, Request, Header
 from opentelemetry import trace
 from opentelemetry.exporter.jaeger.thrift import JaegerExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
@@ -9,9 +10,10 @@ from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
+from common.Lib import Lib
+from handlers.account_handler import AccountHandler
 from models.User import User
-from user.handler import UserHandler
-from common.lib import Lib
+from handlers.user_handler import UserHandler
 
 trace.set_tracer_provider(
     TracerProvider(
@@ -19,6 +21,8 @@ trace.set_tracer_provider(
     )
 )
 tracer = trace.get_tracer(__name__)
+
+meter = get_meter(__name__)
 
 # create a JaegerExporter
 jaeger_exporter = JaegerExporter(
@@ -48,7 +52,7 @@ app = FastAPI()
 @app.get("/user/{username}")
 async def get_user(request: Request, username: str, is_test: bool | None = Header(default=False)):
     with tracer.start_as_current_span(
-            "server_request",
+            "get_user",
             context=extract(request.headers),
             attributes={'attr.username': username, 'attr.is_test': is_test},
             kind=trace.SpanKind.SERVER
@@ -66,7 +70,7 @@ async def get_user(request: Request, username: str, is_test: bool | None = Heade
 @app.post("/user")
 async def post_user(request: Request, data: User, is_test: bool | None = Header(default=False)):
     with tracer.start_as_current_span(
-            "server_request",
+            "post_user",
             context=extract(request.headers),
             attributes={'attr.username': data.name, 'attr.is_test': is_test},
             kind=trace.SpanKind.SERVER
@@ -85,7 +89,7 @@ async def post_user(request: Request, data: User, is_test: bool | None = Header(
 @app.put("/user/{username}")
 async def put_user(request: Request, username: str, data: User, is_test: bool | None = Header(default=False)):
     with tracer.start_as_current_span(
-            "server_request",
+            "put_user",
             context=extract(request.headers),
             attributes={'username': username, 'attr.is_test': is_test},
             kind=trace.SpanKind.SERVER
@@ -103,7 +107,7 @@ async def put_user(request: Request, username: str, data: User, is_test: bool | 
 @app.delete("/user/{username}")
 async def delete_user(request: Request, username: str, is_test: bool | None = Header(default=False)):
     with tracer.start_as_current_span(
-            "server_request",
+            "delete_user",
             context=extract(request.headers),
             attributes={'username': username, 'is_test': is_test},
             kind=trace.SpanKind.SERVER
@@ -117,5 +121,21 @@ async def delete_user(request: Request, username: str, is_test: bool | None = He
             logger.error(e)
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
+@app.get("/account/{username}")
+async def get_user(request: Request, username: str, is_test: bool | None = Header(default=False)):
+    with tracer.start_as_current_span(
+            "get_account",
+            context=extract(request.headers),
+            attributes={'attr.username': username, 'attr.is_test': is_test},
+            kind=trace.SpanKind.SERVER
+    ):
+        if Lib.detect_special_characters(username):
+            raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
+        try:
+            account = AccountHandler.handle_get_account(username, is_test)
+            return {"response": account}
+        except Exception as e:
+            logger.error(e)
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 FastAPIInstrumentor.instrument_app(app)

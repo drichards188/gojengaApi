@@ -61,7 +61,7 @@ class Dynamo:
                     f"{e.response['Error']['Code'], e.response['Error']['Message']}")
                 raise Exception(f"dynamo error {e.response['Error']['Code']} and msg {e.response['Error']['Message']}")
 
-    # todo create a general update user function
+    # todo create a general update handlers function
     @staticmethod
     def update_user_password(table_name: str, item: dict) -> str:
         with tracer.start_as_current_span(
