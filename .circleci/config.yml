@@ -7,10 +7,14 @@ jobs:
     executor: python/default # use the default executor defined within the orb
     steps:
       - checkout # checkout source code
-      - python/install-packages:
-          pkg-manager: pip
       - run:
-          pip install -r src/gojenga/requirements.txt
+          name: Setup Virtual Env
+          command: |
+            virtualenv -p python3.10 env
+            echo "source ./env/bin/activate" >> $BASH_ENV
+      - run:
+          name: Install Dependencies
+          command: pip install -r src/gojenga/requirements.txt
       - run:
           name: Run tests
           command: python -m pytest
