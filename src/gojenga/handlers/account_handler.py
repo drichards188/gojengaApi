@@ -59,3 +59,18 @@ class AccountHandler:
             except Exception as e:
                 logger.info(f'error {e}')
                 raise ValueError(e)
+
+    @staticmethod
+    def handle_delete_account(username: str, is_test: bool) -> str:
+        with tracer.start_as_current_span(
+                "handle_delete_account",
+                attributes={'username': username, 'is_test': is_test}):
+            table_name: str = 'ledger'
+            if is_test:
+                table_name = 'ledgerTest'
+            try:
+                resp = Dynamo.delete_item(table_name, {'name': username})
+                return resp
+            except Exception as e:
+                logger.info(f'error {e}')
+                raise ValueError(e)

@@ -55,7 +55,8 @@ class Dynamo:
             try:
                 table = dyn_resource.Table(table_name)
                 response = table.delete_item(
-                    Key=item
+                    Key=item,
+                    ReturnValues="ALL_OLD"
                 )
                 return 'delete item success'
             except ClientError as e:

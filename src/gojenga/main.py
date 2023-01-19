@@ -174,4 +174,21 @@ async def put_user(request: Request, username: str, data: Account, is_test: bool
             logger.error(e)
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
+@app.delete("/account/{username}")
+async def delete_user(request: Request, username: str, is_test: bool | None = Header(default=False)):
+    with tracer.start_as_current_span(
+            "delete_account",
+            context=extract(request.headers),
+            attributes={'username': username, 'is_test': is_test},
+            kind=trace.SpanKind.SERVER
+    ):
+        if Lib.detect_special_characters(username):
+            raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
+        try:
+            resp = AccountHandler.handle_delete_account(username, is_test)
+            return {"response": resp}
+        except Exception as e:
+            logger.error(e)
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
 FastAPIInstrumentor.instrument_app(app)
