@@ -5,7 +5,7 @@ from opentelemetry.propagate import extract
 from opentelemetry import trace
 from opentelemetry.trace import Tracer
 
-from storage.dynamo import Dynamo
+from storage.Dynamo import Dynamo
 
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
