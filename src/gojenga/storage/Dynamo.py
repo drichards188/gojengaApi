@@ -37,9 +37,11 @@ class Dynamo:
             try:
                 table = dyn_resource.Table(table_name)
                 response = table.put_item(
-                    Item=item
+                    Item=item,
+                    ReturnValues="ALL_OLD"
                 )
-                return 'insert item success'
+                return 'insert item succeeded'
+
             except ClientError as e:
                 logger.error(
                     f"{e.response['Error']['Code'], e.response['Error']['Message']}")
@@ -78,6 +80,27 @@ class Dynamo:
                         ':p': password},
                     ReturnValues="UPDATED_NEW")
                 print(response)
+                return 'update item success'
+            except ClientError as e:
+                logger.error(
+                    f"{e.response['Error']['Code'], e.response['Error']['Message']}")
+                raise Exception(f"dynamo error {e.response['Error']['Code']} and msg {e.response['Error']['Message']}")
+
+    @staticmethod
+    def update_account_balance(table_name: str, item: dict) -> str:
+        with tracer.start_as_current_span(
+                "update_balance",
+                attributes={'attr.table_name': table_name}):
+            name = item["name"]
+            balance = item["balance"]
+            try:
+                table = dyn_resource.Table(table_name)
+                response = table.update_item(
+                    Key={'name': name},
+                    UpdateExpression="set balance=:p",
+                    ExpressionAttributeValues={
+                        ':p': balance},
+                    ReturnValues="UPDATED_NEW")
                 return 'update item success'
             except ClientError as e:
                 logger.error(

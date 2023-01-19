@@ -12,6 +12,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 from common.Lib import Lib
 from handlers.account_handler import AccountHandler
+from models.Account import Account
 from models.User import User
 from handlers.user_handler import UserHandler
 
@@ -134,6 +135,41 @@ async def get_user(request: Request, username: str, is_test: bool | None = Heade
         try:
             account = AccountHandler.handle_get_account(username, is_test)
             return {"response": account}
+        except Exception as e:
+            logger.error(e)
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+@app.post("/account")
+async def post_account(request: Request, data: Account, is_test: bool | None = Header(default=False)):
+    with tracer.start_as_current_span(
+            "post_account",
+            context=extract(request.headers),
+            attributes={'attr.username': data.name, 'attr.is_test': is_test},
+            kind=trace.SpanKind.SERVER
+    ):
+        try:
+            if Lib.detect_special_characters(data.name):
+                raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
+
+            resp = AccountHandler.handle_create_account(data.name, data.balance, is_test)
+            return {"response": resp}
+        except Exception as e:
+            logger.error(e)
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+@app.put("/account/{username}")
+async def put_user(request: Request, username: str, data: Account, is_test: bool | None = Header(default=False)):
+    with tracer.start_as_current_span(
+            "put_user",
+            context=extract(request.headers),
+            attributes={'username': username, 'attr.is_test': is_test},
+            kind=trace.SpanKind.SERVER
+    ):
+        if Lib.detect_special_characters(username):
+            raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
+        try:
+            resp = AccountHandler.handle_update_account(username, data.balance, is_test)
+            return {"response": resp}
         except Exception as e:
             logger.error(e)
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
