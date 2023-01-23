@@ -23,7 +23,7 @@ class UserHandler:
             if is_test:
                 table_name = 'usersTest'
             try:
-                user = Dynamo.get_item(table_name, 'name', username)
+                user = Dynamo.get_item(table_name, {'name': username})
                 return user
             except Exception as e:
                 logger.info(f'error {e}')
@@ -73,6 +73,29 @@ class UserHandler:
             try:
                 resp = Dynamo.delete_item(table_name, {'name': username})
                 return resp
+            except Exception as e:
+                logger.info(f'error {e}')
+                raise ValueError(e)
+
+    @staticmethod
+    def handle_login(username: str, password: str, is_test: bool) -> dict:
+        with tracer.start_as_current_span(
+                "handle_login",
+                attributes={'attr.username': username, 'attr.is_test': is_test},
+                kind=trace.SpanKind.SERVER
+        ):
+            table_name: str = 'users'
+            if is_test:
+                table_name = 'usersTest'
+            try:
+                query: dict = {'name': username}
+                user = Dynamo.get_item(table_name, query)
+                # todo return JWT
+                if user:
+                    if user['name'] == username and user['password'] == password:
+                        return {'msg': '123ieuw84'}
+                else:
+                    raise LookupError('login failed')
             except Exception as e:
                 logger.info(f'error {e}')
                 raise ValueError(e)

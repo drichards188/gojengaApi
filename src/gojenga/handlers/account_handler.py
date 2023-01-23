@@ -21,7 +21,7 @@ class AccountHandler:
             if is_test:
                 table_name = 'ledgerTest'
             try:
-                user = Dynamo.get_item(table_name, 'name', username)
+                user = Dynamo.get_item(table_name, {'name': username})
                 return user
             except Exception as e:
                 logger.info(f'error {e}')
