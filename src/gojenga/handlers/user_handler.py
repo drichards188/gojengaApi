@@ -1,6 +1,7 @@
 import logging
 
 from botocore.exceptions import ClientError
+from fastapi import HTTPException
 from opentelemetry.propagate import extract
 from opentelemetry import trace
 from opentelemetry.trace import Tracer
@@ -91,11 +92,12 @@ class UserHandler:
                 query: dict = {'name': username}
                 user = Dynamo.get_item(table_name, query)
                 # todo return JWT
-                if user:
-                    if user['name'] == username and user['password'] == password:
-                        return {'msg': '123ieuw84'}
+                if user and user['name'] == username and user['password'] == password:
+                    return {
+                        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+                        "token_type": "bearer"}
                 else:
-                    raise LookupError('login failed')
+                    raise ValueError("Incorrect username or password")
             except Exception as e:
                 logger.info(f'error {e}')
                 raise ValueError(e)
