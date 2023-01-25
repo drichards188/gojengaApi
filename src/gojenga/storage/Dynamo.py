@@ -11,13 +11,13 @@ tracer = trace.get_tracer(__name__)
 
 class Dynamo:
     @staticmethod
-    def get_item(table_name: str, key: str, value: str):
+    def get_item(table_name: str, query: dict):
         with tracer.start_as_current_span(
                 "get_item",
-                attributes={'attr.table_name': table_name, 'attr.key': key, 'attr.value': value}):
+                attributes={'attr.table_name': table_name, 'attr.query': query}):
             try:
                 table = dyn_resource.Table(table_name)
-                response = table.get_item(Key={key: value})
+                response = table.get_item(Key=query)
 
                 if 'Item' in response:
                     return response['Item']
