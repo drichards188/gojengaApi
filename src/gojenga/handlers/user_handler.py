@@ -6,6 +6,7 @@ from opentelemetry.propagate import extract
 from opentelemetry import trace
 from opentelemetry.trace import Tracer
 
+from common.Auth import get_password_hash
 from storage.Dynamo import Dynamo
 
 logger = logging.getLogger(__name__)
@@ -40,8 +41,10 @@ class UserHandler:
             if is_test:
                 table_name = 'usersTest'
             try:
+                hashed_password: str = get_password_hash(password)
+
                 resp = Dynamo.create_item(table_name, {'name': username,
-                                                       'password': password})
+                                                       'password': hashed_password})
                 return resp
             except Exception as e:
                 logger.info(f'error {e}')

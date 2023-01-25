@@ -12,12 +12,21 @@ from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-from common.Auth import Auth
+from common.Auth import MyAuth, ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token, get_current_active_user, \
+    authenticate_user, Token, fake_users_db
 from common.Lib import Lib
 from handlers.account_handler import AccountHandler
 from models.Account import Account
 from models.User import User
 from handlers.user_handler import UserHandler
+
+from datetime import datetime, timedelta
+
+from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from pydantic import BaseModel
 
 trace.set_tracer_provider(
     TracerProvider(
@@ -27,7 +36,6 @@ trace.set_tracer_provider(
 tracer = trace.get_tracer(__name__)
 
 meter = get_meter(__name__)
-
 
 # create a JaegerExporter
 jaeger_exporter = JaegerExporter(
@@ -53,7 +61,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-auth: Auth = Auth()
+my_auth: MyAuth = MyAuth()
 
 
 @app.post("/oauth")
@@ -66,7 +74,7 @@ async def oauth_login(form_data: OAuth2PasswordRequestForm = Depends()):
 
 @app.get("/user/{username}")
 async def get_user(request: Request, username: str, is_test: Optional[bool] | None = Header(default=False),
-                   current_user: User = Depends(auth.get_current_active_user)):
+                   current_user: User = Depends(get_current_active_user)):
     with tracer.start_as_current_span(
             "get_user",
             context=extract(request.headers),
@@ -214,7 +222,8 @@ async def delete_user(request: Request, username: str, is_test: Optional[bool] |
 
 
 @app.post("/login")
-async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), is_test: Optional[bool] | None = Header(default=False)):
+async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(),
+                is_test: Optional[bool] | None = Header(default=False)):
     with tracer.start_as_current_span(
             "login",
             context=extract(request.headers),
@@ -232,6 +241,32 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
             if str(e) == "Incorrect username or password":
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@app.post("/token", response_model=Token)
+async def login_for_access_token(is_test: Optional[bool] | None = Header(default=False), form_data: OAuth2PasswordRequestForm = Depends()):
+    user = authenticate_user(fake_users_db, form_data.username, form_data.password, is_test)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user["name"]}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@app.get("/users/me/", response_model=User)
+async def read_users_me(current_user: User = Depends(get_current_active_user)):
+    return current_user
+
+
+@app.get("/users/me/items/")
+async def read_own_items(current_user: User = Depends(get_current_active_user)):
+    return [{"item_id": "Foo", "owner": current_user["name"]}]
 
 
 FastAPIInstrumentor.instrument_app(app)

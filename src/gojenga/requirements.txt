@@ -9,3 +9,5 @@ opentelemetry-instrumentation-fastapi==0.36b0
 pytest==7.2.1
 httpx==0.23.3
 python-multipart==0.0.5
+python-jose==3.3.0
+passlib==1.7.4
