@@ -221,42 +221,30 @@ async def delete_user(request: Request, username: str, is_test: Optional[bool] |
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@app.post("/login")
-async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(),
-                is_test: Optional[bool] | None = Header(default=False)):
+@app.post("/login", response_model=Token)
+async def login_for_access_token(request: Request, is_test: Optional[bool] | None = Header(default=False),
+                                 form_data: OAuth2PasswordRequestForm = Depends()):
     with tracer.start_as_current_span(
             "login",
             context=extract(request.headers),
-            attributes={'attr.username': form_data.username, 'attr.is_test': is_test},
+            attributes={'form_data': form_data, 'is_test': is_test},
             kind=trace.SpanKind.SERVER
     ):
-        try:
-            if Lib.detect_special_characters(form_data.username):
-                raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
-            resp = UserHandler.handle_login(form_data.username, form_data.password, is_test)
-            return resp
-        except Exception as e:
-            logger.error(e)
-            # todo detect a general error or a item not found error and return proper response
-            if str(e) == "Incorrect username or password":
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
-
-@app.post("/token", response_model=Token)
-async def login_for_access_token(is_test: Optional[bool] | None = Header(default=False), form_data: OAuth2PasswordRequestForm = Depends()):
-    user = authenticate_user(fake_users_db, form_data.username, form_data.password, is_test)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
+        table_name: str = 'users'
+        if is_test:
+            table_name = 'usersTest'
+        user = authenticate_user(table_name, form_data.username, form_data.password)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect username or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": user["name"]}, expires_delta=access_token_expires
         )
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user["name"]}, expires_delta=access_token_expires
-    )
-    return {"access_token": access_token, "token_type": "bearer"}
+        return {"access_token": access_token, "token_type": "bearer"}
 
 
 @app.get("/users/me/", response_model=User)
