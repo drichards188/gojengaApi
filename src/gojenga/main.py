@@ -250,4 +250,42 @@ async def delete_user(request: Request, username: str, is_test: Optional[bool] |
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
+@app.post("/deposit")
+async def post_deposit(request: Request, data: Account, is_test: Optional[bool] | None = Header(default=False)):
+    with tracer.start_as_current_span(
+            "post_deposit",
+            context=extract(request.headers),
+            attributes={'attr.username': data.name, 'attr.is_test': is_test},
+            kind=trace.SpanKind.SERVER
+    ):
+        try:
+            if Lib.detect_special_characters(data.name):
+                raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
+
+            resp = AccountHandler.handle_modify_account(data.name, data.balance, is_test)
+            return {"response": resp}
+        except Exception as e:
+            logger.error(e)
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@app.post("/transaction")
+async def post_account(request: Request, data: Account, is_test: Optional[bool] | None = Header(default=False)):
+    with tracer.start_as_current_span(
+            "post_transaction",
+            context=extract(request.headers),
+            attributes={'attr.username': data.name, 'attr.is_test': is_test},
+            kind=trace.SpanKind.SERVER
+    ):
+        try:
+            if Lib.detect_special_characters(data.name):
+                raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
+
+            resp = AccountHandler.handle_update_account(data.name, data.balance, is_test)
+            return {"response": resp}
+        except Exception as e:
+            logger.error(e)
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
 FastAPIInstrumentor.instrument_app(app)

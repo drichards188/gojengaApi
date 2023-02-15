@@ -53,6 +53,22 @@ class AccountHandler:
             if is_test:
                 table_name = 'ledgerTest'
             try:
+                resp = Dynamo.update_account_balance(table_name, {'name': username,
+                                                                  'balance': balance})
+                return resp
+            except Exception as e:
+                logger.info(f'error {e}')
+                raise ValueError(e)
+
+    @staticmethod
+    def handle_modify_account(username: str, balance: Decimal, is_test: bool) -> str:
+        with tracer.start_as_current_span(
+                "handle_update_user",
+                attributes={'attr.username': username, 'is_test': is_test}):
+            table_name: str = 'ledger'
+            if is_test:
+                table_name = 'ledgerTest'
+            try:
                 current_balance = Dynamo.get_item(table_name, {'name': username})
                 balance: float = current_balance["balance"] + balance
 
