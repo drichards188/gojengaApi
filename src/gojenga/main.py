@@ -11,6 +11,7 @@ from opentelemetry.propagate import extract
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from starlette.middleware.cors import CORSMiddleware
 
 from common.Auth import MyAuth, ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token, get_current_active_user, \
     authenticate_user, Token, fake_users_db
@@ -61,15 +62,43 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 my_auth: MyAuth = MyAuth()
 
 
-@app.post("/oauth")
-async def oauth_login(form_data: OAuth2PasswordRequestForm = Depends()):
-    print(form_data)
-    if form_data.username != "allie":
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
-    return {"access_token": "pDiddle", "token_type": "bearer"}
+@app.post("/login", response_model=Token)
+async def login_for_access_token(request: Request, is_test: Optional[bool] | None = Header(default=False),
+                                 form_data: OAuth2PasswordRequestForm = Depends()):
+    with tracer.start_as_current_span(
+            "login",
+            context=extract(request.headers),
+            attributes={'form_data': form_data, 'is_test': is_test},
+            kind=trace.SpanKind.SERVER
+    ):
+        table_name: str = 'users'
+        if is_test:
+            table_name = 'usersTest'
+        user = authenticate_user(table_name, form_data.username, form_data.password)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect username or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": user["name"]}, expires_delta=access_token_expires
+        )
+        return {"access_token": access_token, "token_type": "bearer"}
 
 
 @app.get("/user/{username}")
@@ -219,42 +248,6 @@ async def delete_user(request: Request, username: str, is_test: Optional[bool] |
         except Exception as e:
             logger.error(e)
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
-
-@app.post("/login", response_model=Token)
-async def login_for_access_token(request: Request, is_test: Optional[bool] | None = Header(default=False),
-                                 form_data: OAuth2PasswordRequestForm = Depends()):
-    with tracer.start_as_current_span(
-            "login",
-            context=extract(request.headers),
-            attributes={'form_data': form_data, 'is_test': is_test},
-            kind=trace.SpanKind.SERVER
-    ):
-        table_name: str = 'users'
-        if is_test:
-            table_name = 'usersTest'
-        user = authenticate_user(table_name, form_data.username, form_data.password)
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect username or password",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = create_access_token(
-            data={"sub": user["name"]}, expires_delta=access_token_expires
-        )
-        return {"access_token": access_token, "token_type": "bearer"}
-
-
-@app.get("/users/me/", response_model=User)
-async def read_users_me(current_user: User = Depends(get_current_active_user)):
-    return current_user
-
-
-@app.get("/users/me/items/")
-async def read_own_items(current_user: User = Depends(get_current_active_user)):
-    return [{"item_id": "Foo", "owner": current_user["name"]}]
 
 
 FastAPIInstrumentor.instrument_app(app)

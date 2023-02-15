@@ -53,6 +53,9 @@ class AccountHandler:
             if is_test:
                 table_name = 'ledgerTest'
             try:
+                current_balance = Dynamo.get_item(table_name, {'name': username})
+                balance: float = current_balance["balance"] + balance
+
                 resp = Dynamo.update_account_balance(table_name, {'name': username,
                                                                   'balance': balance})
                 return resp
