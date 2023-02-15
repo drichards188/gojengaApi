@@ -63,7 +63,7 @@ class AccountHandler:
     @staticmethod
     def handle_modify_account(username: str, balance: Decimal, is_test: bool) -> str:
         with tracer.start_as_current_span(
-                "handle_update_user",
+                "handle_modify_user",
                 attributes={'attr.username': username, 'is_test': is_test}):
             table_name: str = 'ledger'
             if is_test:
@@ -97,7 +97,7 @@ class AccountHandler:
     @staticmethod
     def handle_transaction(sender: str, receiver: str, amount: Decimal, is_test: bool) -> str:
         with tracer.start_as_current_span(
-                "handle_update_user",
+                "handle_transaction",
                 attributes={'attr.sender': sender, 'attr.receiver': receiver, 'is_test': is_test}):
             table_name: str = 'ledger'
             if is_test:
