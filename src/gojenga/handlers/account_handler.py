@@ -93,3 +93,20 @@ class AccountHandler:
             except Exception as e:
                 logger.info(f'error {e}')
                 raise ValueError(e)
+
+    @staticmethod
+    def handle_transaction(sender: str, receiver: str, amount: Decimal, is_test: bool) -> str:
+        with tracer.start_as_current_span(
+                "handle_update_user",
+                attributes={'attr.sender': sender, 'attr.receiver': receiver, 'is_test': is_test}):
+            table_name: str = 'ledger'
+            if is_test:
+                table_name = 'ledgerTest'
+            try:
+                resp = AccountHandler.handle_modify_account(sender, amount * -1, is_test)
+                resp = AccountHandler.handle_modify_account(receiver, amount, is_test)
+
+                return resp
+            except Exception as e:
+                logger.info(f'error {e}')
+                raise ValueError(e)

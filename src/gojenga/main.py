@@ -18,6 +18,7 @@ from common.Auth import MyAuth, ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token
 from common.Lib import Lib
 from handlers.account_handler import AccountHandler
 from models.Account import Account
+from models.Transaction import Transaction
 from models.User import User
 from handlers.user_handler import UserHandler
 
@@ -270,18 +271,18 @@ async def post_deposit(request: Request, data: Account, is_test: Optional[bool] 
 
 
 @app.post("/transaction")
-async def post_account(request: Request, data: Account, is_test: Optional[bool] | None = Header(default=False)):
+async def post_account(request: Request, data: Transaction, is_test: Optional[bool] | None = Header(default=False)):
     with tracer.start_as_current_span(
             "post_transaction",
             context=extract(request.headers),
-            attributes={'attr.username': data.name, 'attr.is_test': is_test},
+            attributes={'attr.data': data, 'attr.is_test': is_test},
             kind=trace.SpanKind.SERVER
     ):
         try:
-            if Lib.detect_special_characters(data.name):
-                raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
+            if Lib.detect_special_characters(data.sender) or Lib.detect_special_characters(data.receiver):
+                raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal sender and receiver')
 
-            resp = AccountHandler.handle_update_account(data.name, data.balance, is_test)
+            resp = AccountHandler.handle_transaction(data.sender, data.receiver, data.amount, is_test)
             return {"response": resp}
         except Exception as e:
             logger.error(e)
