@@ -52,3 +52,8 @@ def test_delete_account():
     assert resp == "insert item succeeded", 'failed to insert item before testing delete'
     response = client.delete("/account/zala", headers={'Is-Test': 'True'})
     assert response.json() == {"response": "delete item success"}
+
+
+def test_login():
+    response = client.post("/login", data={'username': 'zala', 'password': 'password'}, headers={'Is-Test': 'True'})
+    assert response.status_code == 200, f'wanted 200 got {response.status_code}'

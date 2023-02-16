@@ -1,4 +1,3 @@
-import decimal
 import logging
 from decimal import *
 from opentelemetry import trace
@@ -61,6 +60,25 @@ class AccountHandler:
                 raise ValueError(e)
 
     @staticmethod
+    def handle_modify_account(username: str, balance: Decimal, is_test: bool) -> str:
+        with tracer.start_as_current_span(
+                "handle_modify_user",
+                attributes={'attr.username': username, 'is_test': is_test}):
+            table_name: str = 'ledger'
+            if is_test:
+                table_name = 'ledgerTest'
+            try:
+                current_balance = Dynamo.get_item(table_name, {'name': username})
+                balance: float = current_balance["balance"] + balance
+
+                resp = Dynamo.update_account_balance(table_name, {'name': username,
+                                                                  'balance': balance})
+                return resp
+            except Exception as e:
+                logger.info(f'error {e}')
+                raise ValueError(e)
+
+    @staticmethod
     def handle_delete_account(username: str, is_test: bool) -> str:
         with tracer.start_as_current_span(
                 "handle_delete_account",
@@ -70,6 +88,23 @@ class AccountHandler:
                 table_name = 'ledgerTest'
             try:
                 resp = Dynamo.delete_item(table_name, {'name': username})
+                return resp
+            except Exception as e:
+                logger.info(f'error {e}')
+                raise ValueError(e)
+
+    @staticmethod
+    def handle_transaction(sender: str, receiver: str, amount: Decimal, is_test: bool) -> str:
+        with tracer.start_as_current_span(
+                "handle_transaction",
+                attributes={'attr.sender': sender, 'attr.receiver': receiver, 'is_test': is_test}):
+            table_name: str = 'ledger'
+            if is_test:
+                table_name = 'ledgerTest'
+            try:
+                resp = AccountHandler.handle_modify_account(sender, amount * -1, is_test)
+                resp = AccountHandler.handle_modify_account(receiver, amount, is_test)
+
                 return resp
             except Exception as e:
                 logger.info(f'error {e}')

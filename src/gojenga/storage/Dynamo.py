@@ -23,7 +23,7 @@ class Dynamo:
                     return response['Item']
                 else:
                     logger.error('item not found')
-                    raise ValueError('item not found')
+                    raise ValueError(f'item not found {query}')
             except ClientError as e:
                 logger.error(
                     f"{e.response['Error']['Code'], e.response['Error']['Message']}")
