@@ -1,9 +1,8 @@
 import logging.config
 from typing import Optional
 
-from fastapi.security import OAuth2PasswordRequestForm
 from opentelemetry.metrics import get_meter
-from fastapi import FastAPI, HTTPException, status, Request, Header, Depends
+from fastapi import Request, Header
 from opentelemetry import trace
 from opentelemetry.exporter.jaeger.thrift import JaegerExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
@@ -14,7 +13,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from starlette.middleware.cors import CORSMiddleware
 
 from common.Auth import MyAuth, ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token, get_current_active_user, \
-    authenticate_user, Token, fake_users_db
+    authenticate_user, Token
 from common.Lib import Lib
 from handlers.account_handler import AccountHandler
 from models.Account import Account
@@ -22,13 +21,10 @@ from models.Transaction import Transaction
 from models.User import User
 from handlers.user_handler import UserHandler
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from fastapi import Depends, FastAPI, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jose import JWTError, jwt
-from passlib.context import CryptContext
-from pydantic import BaseModel
+from fastapi.security import OAuth2PasswordRequestForm
 
 trace.set_tracer_provider(
     TracerProvider(

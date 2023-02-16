@@ -1,4 +1,3 @@
-import decimal
 import logging
 from decimal import *
 from opentelemetry import trace
