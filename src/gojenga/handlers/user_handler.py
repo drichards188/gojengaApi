@@ -1,5 +1,6 @@
 import logging
 
+from decimal import *
 from botocore.exceptions import ClientError
 from fastapi import HTTPException
 from opentelemetry.propagate import extract
@@ -7,6 +8,7 @@ from opentelemetry import trace
 from opentelemetry.trace import Tracer
 
 from common.Auth import get_password_hash
+from handlers.account_handler import AccountHandler
 from storage.Dynamo import Dynamo
 
 logger = logging.getLogger(__name__)
@@ -32,7 +34,7 @@ class UserHandler:
                 raise ValueError(e)
 
     @staticmethod
-    def handle_create_user(username: str, password: str, is_test: bool) -> str:
+    def handle_create_user(username: str, password: str, is_test: bool) -> dict | str:
         with tracer.start_as_current_span(
                 "handle_create_user",
                 attributes={'username': username, 'attr.is_test': is_test}
@@ -45,7 +47,16 @@ class UserHandler:
 
                 resp = Dynamo.create_item(table_name, {'name': username,
                                                        'password': hashed_password})
-                return resp
+
+                ledger_resp = AccountHandler.handle_create_account(username, Decimal('0.00'), is_test)
+
+                if resp and ledger_resp:
+                    return {
+                        "user": username,
+                        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+                        "token_type": "bearer"}
+                else:
+                    return resp
             except Exception as e:
                 logger.info(f'error {e}')
                 raise ValueError(e)
@@ -94,7 +105,6 @@ class UserHandler:
             try:
                 query: dict = {'name': username}
                 user = Dynamo.get_item(table_name, query)
-                # todo return JWT
                 if user and user['name'] == username and user['password'] == password:
                     return {
                         "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
