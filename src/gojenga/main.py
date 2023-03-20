@@ -72,6 +72,11 @@ app.add_middleware(
 my_auth: MyAuth = MyAuth()
 
 
+@app.get("/hello")
+async def hello():
+    return {"message": 'hiya'}
+
+
 @app.post("/login", response_model=Token)
 async def login_for_access_token(request: Request, is_test: Optional[bool] | None = Header(default=False),
                                  form_data: OAuth2PasswordRequestForm = Depends()):
@@ -276,7 +281,8 @@ async def post_account(request: Request, data: Transaction, is_test: Optional[bo
     ):
         try:
             if Lib.detect_special_characters(data.sender) or Lib.detect_special_characters(data.receiver):
-                raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal sender and receiver')
+                raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT,
+                                    detail='please send legal sender and receiver')
 
             resp = AccountHandler.handle_transaction(data.sender, data.receiver, data.amount, is_test)
             return {"response": resp}
