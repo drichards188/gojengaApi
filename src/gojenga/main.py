@@ -72,12 +72,12 @@ app.add_middleware(
 my_auth: MyAuth = MyAuth()
 
 
-@app.get("/hello")
+@app.get("/hello", tags=["Debug"])
 async def hello():
     return {"message": 'hiya'}
 
 
-@app.post("/login", response_model=Token)
+@app.post("/login", response_model=Token, tags=["Login"])
 async def login_for_access_token(request: Request, is_test: Optional[bool] | None = Header(default=False),
                                  form_data: OAuth2PasswordRequestForm = Depends()):
     with tracer.start_as_current_span(
@@ -103,7 +103,7 @@ async def login_for_access_token(request: Request, is_test: Optional[bool] | Non
         return {"access_token": access_token, "token_type": "bearer"}
 
 
-@app.get("/user/{username}")
+@app.get("/user/{username}", tags=["User"])
 async def get_user(request: Request, username: str, is_test: Optional[bool] | None = Header(default=False),
                    current_user: User = Depends(get_current_active_user)):
     with tracer.start_as_current_span(
@@ -123,7 +123,7 @@ async def get_user(request: Request, username: str, is_test: Optional[bool] | No
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@app.post("/user")
+@app.post("/user", tags=["User"])
 async def post_user(request: Request, data: User, is_test: Optional[bool] | None = Header(default=False)):
     with tracer.start_as_current_span(
             "post_user",
@@ -142,7 +142,7 @@ async def post_user(request: Request, data: User, is_test: Optional[bool] | None
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@app.put("/user/{username}")
+@app.put("/user/{username}", tags=["User"])
 async def put_user(request: Request, username: str, data: User, is_test: Optional[bool] | None = Header(default=False)):
     with tracer.start_as_current_span(
             "put_user",
@@ -160,7 +160,7 @@ async def put_user(request: Request, username: str, data: User, is_test: Optiona
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@app.delete("/user/{username}")
+@app.delete("/user/{username}", tags=["User"])
 async def delete_user(request: Request, username: str, is_test: Optional[bool] | None = Header(default=False)):
     with tracer.start_as_current_span(
             "delete_user",
@@ -178,7 +178,7 @@ async def delete_user(request: Request, username: str, is_test: Optional[bool] |
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@app.get("/account/{username}")
+@app.get("/account/{username}", tags=["Account"])
 async def get_user(request: Request, username: str, is_test: Optional[bool] | None = Header(default=False)):
     with tracer.start_as_current_span(
             "get_account",
@@ -196,7 +196,7 @@ async def get_user(request: Request, username: str, is_test: Optional[bool] | No
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@app.post("/account")
+@app.post("/account", tags=["Account"])
 async def post_account(request: Request, data: Account, is_test: Optional[bool] | None = Header(default=False)):
     with tracer.start_as_current_span(
             "post_account",
@@ -215,7 +215,7 @@ async def post_account(request: Request, data: Account, is_test: Optional[bool] 
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@app.put("/account/{username}")
+@app.put("/account/{username}", tags=["Account"])
 async def put_user(request: Request, username: str, data: Account,
                    is_test: Optional[bool] | None = Header(default=False)):
     with tracer.start_as_current_span(
@@ -234,7 +234,7 @@ async def put_user(request: Request, username: str, data: Account,
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@app.delete("/account/{username}")
+@app.delete("/account/{username}", tags=["Account"])
 async def delete_user(request: Request, username: str, is_test: Optional[bool] | None = Header(default=False)):
     with tracer.start_as_current_span(
             "delete_account",
@@ -252,7 +252,7 @@ async def delete_user(request: Request, username: str, is_test: Optional[bool] |
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@app.post("/deposit")
+@app.post("/deposit", tags=["Deposit"])
 async def post_deposit(request: Request, data: Account, is_test: Optional[bool] | None = Header(default=False)):
     with tracer.start_as_current_span(
             "post_deposit",
@@ -271,7 +271,7 @@ async def post_deposit(request: Request, data: Account, is_test: Optional[bool] 
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@app.post("/transaction")
+@app.post("/transaction", tags=["Transaction"])
 async def post_account(request: Request, data: Transaction, is_test: Optional[bool] | None = Header(default=False)):
     with tracer.start_as_current_span(
             "post_transaction",

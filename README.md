@@ -8,7 +8,7 @@
 
 [Live Swagger Interface](http://127.0.0.1:8000/docs#/)
 
-![swagger screenshot](media/swagger_shot1.png)
+![swagger screenshot](media/gojengaSwagger.png)
 
 ### Architecture
 
