@@ -102,20 +102,19 @@ class AccountHandler:
             if is_test:
                 table_name = 'ledgerTest'
             try:
-                resp = AccountHandler.handle_modify_account(sender, amount * -1, is_test)
-                if resp == 'update item success':
-                    # resp = AccountHandler.handle_modify_account(receiver, amount, is_test)
-                    resp = 'triggering rollback'
-                    if resp != 'update item success':
-
-                        resp = AccountHandler.handle_modify_account(sender, amount, is_test)
-                        if resp != 'update item success':
-                            return 'transaction failed rollback failed'
-                        return 'transaction failed rollback success'
+                sender_resp = AccountHandler.handle_modify_account(sender, amount * -1, is_test)
+                if sender_resp == 'update item success':
+                    receiver_resp = AccountHandler.handle_modify_account(receiver, amount, is_test)
+                    if receiver_resp != 'update item success':
+                        return 'transaction failed'
                 else:
                     return 'transaction failed'
 
-                return resp
+                return sender_resp
             except Exception as e:
+                if sender_resp == 'update item success':
+                    rollback_resp = AccountHandler.handle_modify_account(sender, amount, is_test)
+                    if rollback_resp != 'update item success':
+                        logger.info(f'failed to rollback transaction')
                 logger.info(f'error {e}')
                 raise ValueError(e)

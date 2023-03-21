@@ -57,3 +57,12 @@ def test_delete_account():
 def test_login():
     response = client.post("/login", data={'username': 'zala', 'password': 'password'}, headers={'Is-Test': 'True'})
     assert response.status_code == 200, f'wanted 200 got {response.status_code}'
+
+
+def test_transaction_rollback():
+    response = client.post("/transaction", data={
+        "sender": "david",
+        "receiver": "kovax2",
+        "amount": 1.29
+    }, headers={'Is-Test': 'True'})
+    assert response.status_code == 422, f'wanted 422 got {response.status_code}'
