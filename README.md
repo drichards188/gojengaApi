@@ -4,7 +4,7 @@
 
 [![Gojenga](https://circleci.com/gh/drichards188/gojengaApi.svg?style=svg)](https://github.com/drichards188/gojengaApi)
 
-<b>Run locally to access</b>
+<b>Run locally to access outline</b>
 
 [Live Swagger Interface](http://127.0.0.1:8000/docs#/)
 
