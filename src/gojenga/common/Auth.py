@@ -6,7 +6,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel
 
-from storage.Dynamo import Dynamo
+from storage.Dynamo import Dynamo, logger
 
 
 class MyAuth:
@@ -68,7 +68,10 @@ def get_password_hash(password):
 
 def get_user(table_name, username: str):
     query: dict = {'name': username}
-    user = Dynamo.get_item(table_name, query)
+    try:
+        user = Dynamo.get_item(table_name, query)
+    except Exception as e:
+        logger.error(e)
     user["disabled"] = False
     return user
 
