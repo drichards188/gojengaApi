@@ -312,6 +312,7 @@ async def get_portfolio(request: Request, username: str, is_test: Optional[bool]
             logger.error(e)
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
+
 @app.post("/portfolio/", tags=["Portfolio"])
 async def post_account(request: Request, data: Portfolio, is_test: Optional[bool] | None = Header(default=False)):
     with tracer.start_as_current_span(
@@ -335,15 +336,16 @@ async def post_account(request: Request, data: Portfolio, is_test: Optional[bool
 async def put_user(request: Request, username: str, data: Portfolio,
                    is_test: Optional[bool] | None = Header(default=False)):
     with tracer.start_as_current_span(
-            "put_user",
+            "post_account",
             context=extract(request.headers),
-            attributes={'username': username, 'attr.is_test': is_test},
+            attributes={'attr.username': data.name, 'attr.is_test': is_test},
             kind=trace.SpanKind.SERVER
     ):
-        if Lib.detect_special_characters(username):
-            raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
         try:
-            resp = PortfolioHandler.handle_update_portfolio(username, data, is_test)
+            if Lib.detect_special_characters(data.name):
+                raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
+
+            resp = PortfolioHandler.handle_create_portfolio(data.name, data, is_test)
             return {"response": resp}
         except Exception as e:
             logger.error(e)
@@ -366,5 +368,6 @@ async def delete_user(request: Request, username: str, is_test: Optional[bool] |
         except Exception as e:
             logger.error(e)
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
 
 FastAPIInstrumentor.instrument_app(app)
