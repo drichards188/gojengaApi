@@ -16,7 +16,9 @@ from common.Auth import MyAuth, ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token
     authenticate_user, Token
 from common.Lib import Lib
 from handlers.account_handler import AccountHandler
+from handlers.portfolio_handler import PortfolioHandler
 from models.Account import Account
+from models.Portfolio import Portfolio
 from models.Transaction import Transaction
 from models.User import User
 from handlers.user_handler import UserHandler
@@ -196,7 +198,7 @@ async def get_user(request: Request, username: str, is_test: Optional[bool] | No
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@app.post("/account", tags=["Account"])
+@app.post("/account/", tags=["Account"])
 async def post_account(request: Request, data: Account, is_test: Optional[bool] | None = Header(default=False)):
     with tracer.start_as_current_span(
             "post_account",
@@ -252,31 +254,33 @@ async def delete_user(request: Request, username: str, is_test: Optional[bool] |
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@app.post("/deposit", tags=["Deposit"])
-async def post_deposit(request: Request, data: Account, is_test: Optional[bool] | None = Header(default=False)):
+@app.post("/account/{username}/deposit", tags=["Deposit"])
+async def post_deposit(request: Request, username: str, data: Account,
+                       is_test: Optional[bool] | None = Header(default=False)):
     with tracer.start_as_current_span(
             "post_deposit",
             context=extract(request.headers),
-            attributes={'attr.username': data.name, 'attr.is_test': is_test},
+            attributes={'username': username, 'is_test': is_test},
             kind=trace.SpanKind.SERVER
     ):
         try:
-            if Lib.detect_special_characters(data.name):
+            if Lib.detect_special_characters(username):
                 raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
-
-            resp = AccountHandler.handle_modify_account(data.name, data.balance, is_test)
+            print(username)
+            resp = AccountHandler.handle_modify_account(username, data.balance, is_test)
             return {"response": resp}
         except Exception as e:
             logger.error(e)
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@app.post("/transaction", tags=["Transaction"])
-async def post_account(request: Request, data: Transaction, is_test: Optional[bool] | None = Header(default=False)):
+@app.post("/account/{username}/transaction", tags=["Transaction"])
+async def post_transaction(request: Request, username: str, data: Transaction,
+                           is_test: Optional[bool] | None = Header(default=False)):
     with tracer.start_as_current_span(
             "post_transaction",
             context=extract(request.headers),
-            attributes={'attr.data': data, 'attr.is_test': is_test},
+            attributes={'username': username, 'is_test': is_test},
             kind=trace.SpanKind.SERVER
     ):
         try:
@@ -285,6 +289,81 @@ async def post_account(request: Request, data: Transaction, is_test: Optional[bo
                                     detail='please send legal sender and receiver')
 
             resp = AccountHandler.handle_transaction(data.sender, data.receiver, data.amount, is_test)
+            return {"response": resp}
+        except Exception as e:
+            logger.error(e)
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@app.get("/portfolio/{username}", tags=["Portfolio"])
+async def get_portfolio(request: Request, username: str, is_test: Optional[bool] | None = Header(default=False)):
+    with tracer.start_as_current_span(
+            "get_portfolio",
+            context=extract(request.headers),
+            attributes={'attr.username': username, 'attr.is_test': is_test},
+            kind=trace.SpanKind.SERVER
+    ):
+        if Lib.detect_special_characters(username):
+            raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
+        try:
+            account = PortfolioHandler.handle_get_portfolio(username, is_test)
+            return {"response": account}
+        except Exception as e:
+            logger.error(e)
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@app.post("/portfolio/", tags=["Portfolio"])
+async def post_account(request: Request, data: Portfolio, is_test: Optional[bool] | None = Header(default=False)):
+    with tracer.start_as_current_span(
+            "post_account",
+            context=extract(request.headers),
+            attributes={'attr.username': data.name, 'attr.is_test': is_test},
+            kind=trace.SpanKind.SERVER
+    ):
+        try:
+            if Lib.detect_special_characters(data.name):
+                raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
+
+            resp = PortfolioHandler.handle_create_portfolio(data.name, data, is_test)
+            return {"response": resp}
+        except Exception as e:
+            logger.error(e)
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@app.put("/portfolio/{username}", tags=["Portfolio"])
+async def put_user(request: Request, username: str, data: Portfolio,
+                   is_test: Optional[bool] | None = Header(default=False)):
+    with tracer.start_as_current_span(
+            "post_account",
+            context=extract(request.headers),
+            attributes={'attr.username': data.name, 'attr.is_test': is_test},
+            kind=trace.SpanKind.SERVER
+    ):
+        try:
+            if Lib.detect_special_characters(data.name):
+                raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
+
+            resp = PortfolioHandler.handle_create_portfolio(data.name, data, is_test)
+            return {"response": resp}
+        except Exception as e:
+            logger.error(e)
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@app.delete("/portfolio/{username}", tags=["Portfolio"])
+async def delete_user(request: Request, username: str, is_test: Optional[bool] | None = Header(default=False)):
+    with tracer.start_as_current_span(
+            "delete_portfolio",
+            context=extract(request.headers),
+            attributes={'username': username, 'is_test': is_test},
+            kind=trace.SpanKind.SERVER
+    ):
+        if Lib.detect_special_characters(username):
+            raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
+        try:
+            resp = PortfolioHandler.handle_delete_portfolio(username, is_test)
             return {"response": resp}
         except Exception as e:
             logger.error(e)

@@ -4,6 +4,8 @@ import boto3
 from botocore.exceptions import ClientError
 from opentelemetry import trace
 
+from models.Portfolio import Portfolio
+
 dyn_resource = boto3.resource('dynamodb')
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
@@ -30,7 +32,7 @@ class Dynamo:
                 raise Exception(f"dynamo error {e.response['Error']['Code']} and msg {e.response['Error']['Message']}")
 
     @staticmethod
-    def create_item(table_name: str, item: dict) -> str:
+    def create_item(table_name: str, item: dict | Portfolio) -> str:
         with tracer.start_as_current_span(
                 "create_item",
                 attributes={'table_name': table_name}):
@@ -88,7 +90,7 @@ class Dynamo:
                 raise Exception(f"dynamo error {e.response['Error']['Code']} and msg {e.response['Error']['Message']}")
 
     @staticmethod
-    def update_account_balance(table_name: str, item: dict) -> str:
+    def update_account_balance(table_name: str, item: dict | list) -> str:
         with tracer.start_as_current_span(
                 "update_balance",
                 attributes={'attr.table_name': table_name}):
