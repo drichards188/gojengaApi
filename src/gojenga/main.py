@@ -352,10 +352,10 @@ async def put_user(request: Request, username: str, data: Portfolio,
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@app.delete("/account/{username}", tags=["Portfolio"])
+@app.delete("/portfolio/{username}", tags=["Portfolio"])
 async def delete_user(request: Request, username: str, is_test: Optional[bool] | None = Header(default=False)):
     with tracer.start_as_current_span(
-            "delete_account",
+            "delete_portfolio",
             context=extract(request.headers),
             attributes={'username': username, 'is_test': is_test},
             kind=trace.SpanKind.SERVER
@@ -363,7 +363,7 @@ async def delete_user(request: Request, username: str, is_test: Optional[bool] |
         if Lib.detect_special_characters(username):
             raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
         try:
-            resp = AccountHandler.handle_delete_account(username, is_test)
+            resp = PortfolioHandler.handle_delete_portfolio(username, is_test)
             return {"response": resp}
         except Exception as e:
             logger.error(e)
