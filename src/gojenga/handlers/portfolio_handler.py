@@ -1,6 +1,9 @@
 import logging
+from typing import List
+
 from opentelemetry import trace
 
+from models.Portfolio import Portfolio
 from storage.Dynamo import Dynamo
 
 logger = logging.getLogger(__name__)
@@ -21,6 +24,67 @@ class PortfolioHandler:
             try:
                 user = Dynamo.get_item(table_name, {'name': username})
                 return user
+            except Exception as e:
+                logger.info(f'error {e}')
+                raise ValueError(e)
+
+    @staticmethod
+    def handle_create_portfolio(username: str, portfolio: Portfolio, is_test: bool) -> str:
+        with tracer.start_as_current_span(
+                "handle_create_portfolio",
+                attributes={'username': username, 'attr.is_test': is_test}
+        ):
+            table_name: str = 'portfolio'
+            if is_test:
+                table_name = 'portfolioTest'
+            try:
+                resp = Dynamo.create_item(table_name, {'name': portfolio.name, 'portfolio':  portfolio.portfolio})
+                return resp
+            except Exception as e:
+                logger.info(f'error {e}')
+                raise ValueError(e)
+
+    @staticmethod
+    def handle_update_portfolio(username: str, portfolio: Portfolio, is_test: bool) -> str:
+        with tracer.start_as_current_span(
+                "handle_update_portfolio",
+                attributes={'attr.username': username, 'is_test': is_test}):
+            table_name: str = 'ledger'
+            if is_test:
+                table_name = 'ledgerTest'
+            try:
+                resp = Dynamo.update_account_balance(table_name, portfolio.portfolio)
+                return resp
+            except Exception as e:
+                logger.info(f'error {e}')
+                raise ValueError(e)
+
+    @staticmethod
+    def handle_modify_account(username: str, portfolio: List[object], is_test: bool) -> str:
+        with tracer.start_as_current_span(
+                "handle_modify_user",
+                attributes={'attr.username': username, 'is_test': is_test}):
+            table_name: str = 'ledger'
+            if is_test:
+                table_name = 'ledgerTest'
+            try:
+                resp = Dynamo.update_account_balance(table_name, portfolio)
+                return resp
+            except Exception as e:
+                logger.info(f'error {e}')
+                raise ValueError(e)
+
+    @staticmethod
+    def handle_delete_account(username: str, is_test: bool) -> str:
+        with tracer.start_as_current_span(
+                "handle_delete_account",
+                attributes={'username': username, 'is_test': is_test}):
+            table_name: str = 'ledger'
+            if is_test:
+                table_name = 'ledgerTest'
+            try:
+                resp = Dynamo.delete_item(table_name, {'name': username})
+                return resp
             except Exception as e:
                 logger.info(f'error {e}')
                 raise ValueError(e)
