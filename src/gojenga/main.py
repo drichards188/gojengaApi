@@ -345,7 +345,7 @@ async def put_user(request: Request, username: str, data: Portfolio,
             if Lib.detect_special_characters(data.name):
                 raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
 
-            resp = PortfolioHandler.handle_create_portfolio(data.name, data, is_test)
+            resp = PortfolioHandler.handle_update_portfolio(data.name, data, is_test)
             return {"response": resp}
         except Exception as e:
             logger.error(e)
