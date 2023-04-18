@@ -58,7 +58,8 @@ class PortfolioHandler:
 
                 new_portfolio: list = original_portfolio['portfolio']
 
-                new_portfolio.append(portfolio.portfolio)
+                for coin in portfolio.portfolio:
+                    new_portfolio.append(coin)
 
                 resp = Dynamo.create_item(table_name, {'name': portfolio.name, 'portfolio': new_portfolio})
                 return resp
