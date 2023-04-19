@@ -45,6 +45,29 @@ class PortfolioHandler:
                 raise ValueError(e)
 
     @staticmethod
+    def handle_update_portfolio(username: str, portfolio: Portfolio, is_test: bool) -> str:
+        with tracer.start_as_current_span(
+                "handle_create_portfolio",
+                attributes={'username': username, 'attr.is_test': is_test}
+        ):
+            table_name: str = 'portfolio'
+            if is_test:
+                table_name = 'portfolioTest'
+            try:
+                original_portfolio = PortfolioHandler.handle_get_portfolio(username, is_test)
+
+                new_portfolio: list = original_portfolio['portfolio']
+
+                for coin in portfolio.portfolio:
+                    new_portfolio.append(coin)
+
+                resp = Dynamo.create_item(table_name, {'name': portfolio.name, 'portfolio': new_portfolio})
+                return resp
+            except Exception as e:
+                logger.info(f'error {e}')
+                raise ValueError(e)
+
+    @staticmethod
     def handle_delete_portfolio(username: str, is_test: bool) -> str:
         with tracer.start_as_current_span(
                 "handle_delete_portfolio",
