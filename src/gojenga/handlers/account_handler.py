@@ -69,10 +69,10 @@ class AccountHandler:
                 table_name = 'ledgerTest'
             try:
                 current_balance = Dynamo.get_item(table_name, {'name': username})
-                balance: float = current_balance["balance"] + balance
+                new_balance: float = current_balance["balance"] + balance
 
                 resp = Dynamo.update_account_balance(table_name, {'name': username,
-                                                                  'balance': balance})
+                                                                  'balance': new_balance})
                 return resp
             except Exception as e:
                 logger.info(f'error {e}')

@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from typing import Optional
 
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -38,6 +39,7 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     username: str | None = None
+    expires: Optional[datetime]
 
 
 class User(BaseModel):
@@ -107,13 +109,16 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
+        expires = payload.get("exp")
         if username is None:
             raise credentials_exception
-        token_data = TokenData(username=username)
+        token_data = TokenData(username=username, expires=expires)
     except JWTError:
         raise credentials_exception
     user = get_user(table_name=table_name, username=token_data.username)
     if user is None:
+        raise credentials_exception
+    if datetime.utcnow() > token_data.expires:
         raise credentials_exception
     return user
 
