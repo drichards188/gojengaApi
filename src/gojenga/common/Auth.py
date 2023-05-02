@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Optional
 
+import pytz
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
@@ -72,10 +73,10 @@ def get_user(table_name, username: str):
     query: dict = {'name': username}
     try:
         user = Dynamo.get_item(table_name, query)
+        # user["disabled"] = False
+        return user
     except Exception as e:
         logger.error(e)
-    user["disabled"] = False
-    return user
 
 
 def authenticate_user(table_name, username: str, password: str):
@@ -90,9 +91,9 @@ def authenticate_user(table_name, username: str, password: str):
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(pytz.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
+        expire = datetime.now(pytz.utc) + timedelta(minutes=15)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
@@ -118,12 +119,13 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     user = get_user(table_name=table_name, username=token_data.username)
     if user is None:
         raise credentials_exception
-    if datetime.utcnow() > token_data.expires:
+    if datetime.now(pytz.utc) > token_data.expires:
         raise credentials_exception
     return user
 
 
 async def get_current_active_user(current_user: User = Depends(get_current_user)):
-    if current_user["disabled"]:
+    # if current_user["disabled"]:
+    if current_user is None:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
