@@ -1,6 +1,7 @@
 import logging.config
 from typing import Optional
 
+from jose import jwt
 from opentelemetry.metrics import get_meter
 from fastapi import Request, Header
 from opentelemetry import trace
@@ -12,12 +13,14 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from starlette.middleware.cors import CORSMiddleware
 
+from common import Auth
 from common.Auth import MyAuth, ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token, get_current_active_user, \
     authenticate_user, Token
 from common.Lib import Lib
 from handlers.account_handler import AccountHandler
 from handlers.portfolio_handler import PortfolioHandler
 from models.Account import Account
+from models.JWT import JWT
 from models.Portfolio import Portfolio
 from models.Transaction import Transaction
 from models.User import User
@@ -79,7 +82,7 @@ async def hello():
     return {"message": 'hiya'}
 
 
-@app.post("/login", response_model=Token, tags=["Login"])
+@app.post("/login", response_model=Token, tags=["Auth"])
 async def login_for_access_token(request: Request, is_test: Optional[bool] | None = Header(default=False),
                                  form_data: OAuth2PasswordRequestForm = Depends()):
     with tracer.start_as_current_span(
@@ -105,6 +108,22 @@ async def login_for_access_token(request: Request, is_test: Optional[bool] | Non
         return {"access_token": access_token, "token_type": "bearer"}
 
 
+@app.put("/refresh", tags=["Auth"])
+async def renew_jwt(request: Request, jwt_token: JWT):
+    with tracer.start_as_current_span(
+            "renew",
+            context=extract(request.headers),
+            kind=trace.SpanKind.SERVER
+    ):
+        try:
+            token_data = Auth.get_token_payload(jwt_token.token)
+            renewed_token = Auth.renew_access_token({"sub": token_data.get("sub")}, ACCESS_TOKEN_EXPIRE_MINUTES)
+            return {"token": renewed_token}
+        except Exception as e:
+            logger.error(e)
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
 @app.get("/user/{username}", tags=["User"])
 async def get_user(request: Request, username: str, is_test: Optional[bool] | None = Header(default=False),
                    current_user: User = Depends(get_current_active_user)):
@@ -127,7 +146,7 @@ async def get_user(request: Request, username: str, is_test: Optional[bool] | No
 
 @app.post("/user", tags=["User"])
 async def post_user(request: Request, data: User, is_test: Optional[bool] | None = Header(default=False),
-                   current_user: User = Depends(get_current_active_user)):
+                    current_user: User = Depends(get_current_active_user)):
     with tracer.start_as_current_span(
             "post_user",
             context=extract(request.headers),
@@ -166,7 +185,7 @@ async def put_user(request: Request, username: str, data: User, is_test: Optiona
 
 @app.delete("/user/{username}", tags=["User"])
 async def delete_user(request: Request, username: str, is_test: Optional[bool] | None = Header(default=False),
-                   current_user: User = Depends(get_current_active_user)):
+                      current_user: User = Depends(get_current_active_user)):
     with tracer.start_as_current_span(
             "delete_user",
             context=extract(request.headers),
@@ -204,7 +223,7 @@ async def get_user(request: Request, username: str, is_test: Optional[bool] | No
 
 @app.post("/account/", tags=["Account"])
 async def post_account(request: Request, data: Account, is_test: Optional[bool] | None = Header(default=False),
-                   current_user: User = Depends(get_current_active_user)):
+                       current_user: User = Depends(get_current_active_user)):
     with tracer.start_as_current_span(
             "post_account",
             context=extract(request.headers),
@@ -244,7 +263,7 @@ async def put_user(request: Request, username: str, data: Account,
 
 @app.delete("/account/{username}", tags=["Account"])
 async def delete_user(request: Request, username: str, is_test: Optional[bool] | None = Header(default=False),
-                   current_user: User = Depends(get_current_active_user)):
+                      current_user: User = Depends(get_current_active_user)):
     with tracer.start_as_current_span(
             "delete_account",
             context=extract(request.headers),
@@ -264,7 +283,7 @@ async def delete_user(request: Request, username: str, is_test: Optional[bool] |
 @app.post("/account/{username}/deposit", tags=["Deposit"])
 async def post_deposit(request: Request, username: str, data: Account,
                        is_test: Optional[bool] | None = Header(default=False),
-                   current_user: User = Depends(get_current_active_user)):
+                       current_user: User = Depends(get_current_active_user)):
     with tracer.start_as_current_span(
             "post_deposit",
             context=extract(request.headers),
@@ -285,7 +304,7 @@ async def post_deposit(request: Request, username: str, data: Account,
 @app.post("/account/{username}/transaction", tags=["Transaction"])
 async def post_transaction(request: Request, username: str, data: Transaction,
                            is_test: Optional[bool] | None = Header(default=False),
-                   current_user: User = Depends(get_current_active_user)):
+                           current_user: User = Depends(get_current_active_user)):
     with tracer.start_as_current_span(
             "post_transaction",
             context=extract(request.headers),
@@ -306,7 +325,7 @@ async def post_transaction(request: Request, username: str, data: Transaction,
 
 @app.get("/portfolio/{username}", tags=["Portfolio"])
 async def get_portfolio(request: Request, username: str, is_test: Optional[bool] | None = Header(default=False),
-                   current_user: User = Depends(get_current_active_user)):
+                        current_user: User = Depends(get_current_active_user)):
     with tracer.start_as_current_span(
             "get_portfolio",
             context=extract(request.headers),
@@ -325,7 +344,7 @@ async def get_portfolio(request: Request, username: str, is_test: Optional[bool]
 
 @app.post("/portfolio/", tags=["Portfolio"])
 async def post_account(request: Request, data: Portfolio, is_test: Optional[bool] | None = Header(default=False),
-                   current_user: User = Depends(get_current_active_user)):
+                       current_user: User = Depends(get_current_active_user)):
     with tracer.start_as_current_span(
             "post_account",
             context=extract(request.headers),
@@ -366,7 +385,7 @@ async def put_user(request: Request, username: str, data: Portfolio,
 
 @app.delete("/portfolio/{username}", tags=["Portfolio"])
 async def delete_user(request: Request, username: str, is_test: Optional[bool] | None = Header(default=False),
-                   current_user: User = Depends(get_current_active_user)):
+                      current_user: User = Depends(get_current_active_user)):
     with tracer.start_as_current_span(
             "delete_portfolio",
             context=extract(request.headers),
