@@ -4,7 +4,7 @@ from typing import Optional
 import pytz
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jose import JWTError, jwt
+from jose import JWTError, jwt, ExpiredSignatureError
 from passlib.context import CryptContext
 from pydantic import BaseModel
 
@@ -20,7 +20,7 @@ class MyAuth:
 # openssl rand -hex 32
 SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 2
 
 fake_users_db = {
     "johndoe": {
@@ -130,13 +130,15 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         if username is None:
             raise credentials_exception
         token_data = TokenData(username=username, expires=expires)
+    except ExpiredSignatureError:
+        raise HTTPException(status_code=403, detail="token has been expired")
     except JWTError:
         raise credentials_exception
     user = get_user(table_name=table_name, username=token_data.username)
     if user is None:
         raise credentials_exception
     if datetime.now(pytz.utc) > token_data.expires:
-        raise credentials_exception
+        raise HTTPException(status_code=403, detail="token has been expired")
     return user
 
 
