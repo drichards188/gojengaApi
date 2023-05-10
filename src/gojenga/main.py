@@ -14,7 +14,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from starlette.middleware.cors import CORSMiddleware
 
 from common import Auth
-from common.Auth import MyAuth, ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token, get_current_active_user, \
+from common.Auth import MyAuth, ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_ACCESS_TOKEN_EXPIRE_DAYS, create_access_token, get_current_active_user, \
     authenticate_user, Token
 from common.Lib import Lib
 from handlers.account_handler import AccountHandler
@@ -82,6 +82,12 @@ async def hello():
     return {"message": 'hiya'}
 
 
+@app.get("/testintercept/{username}")
+async def test_intercept(username: str, is_test: Optional[bool] | None = Header(default=False)):
+    print(f'msg received {username} and testing is {is_test}')
+    raise HTTPException(status_code=403, detail="token has been expired")
+
+
 @app.post("/login", response_model=Token, tags=["Auth"])
 async def login_for_access_token(request: Request, is_test: Optional[bool] | None = Header(default=False),
                                  form_data: OAuth2PasswordRequestForm = Depends()):
@@ -91,31 +97,38 @@ async def login_for_access_token(request: Request, is_test: Optional[bool] | Non
             attributes={'form_data': form_data, 'is_test': is_test},
             kind=trace.SpanKind.SERVER
     ):
-        table_name: str = 'users'
-        if is_test:
-            table_name = 'usersTest'
-        user = authenticate_user(table_name, form_data.username, form_data.password)
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect username or password",
-                headers={"WWW-Authenticate": "Bearer"},
+        try:
+            table_name: str = 'users'
+            if is_test:
+                table_name = 'usersTest'
+            user = authenticate_user(table_name, form_data.username, form_data.password)
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Incorrect username or password",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+            access_token = create_access_token(
+                data={"sub": user["name"]}, expires_delta=access_token_expires
             )
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = create_access_token(
-            data={"sub": user["name"]}, expires_delta=access_token_expires
-        )
-        return {"access_token": access_token, "token_type": "bearer"}
+            refresh_token_expires = timedelta(days=REFRESH_ACCESS_TOKEN_EXPIRE_DAYS)
+            refresh_token = create_access_token(data={"sub": user["name"]}, expires_delta=refresh_token_expires)
+            return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
+        except Exception as e:
+            logger.error(e)
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @app.put("/refresh", tags=["Auth"])
 async def renew_jwt(request: Request, jwt_token: JWT):
     with tracer.start_as_current_span(
-            "renew",
+            "refreshToken",
             context=extract(request.headers),
             kind=trace.SpanKind.SERVER
     ):
         try:
+            # todo cant decode an expired token
             token_data = Auth.get_token_payload(jwt_token.token)
             renewed_token = Auth.renew_access_token({"sub": token_data.get("sub")}, ACCESS_TOKEN_EXPIRE_MINUTES)
             return {"token": renewed_token}

@@ -20,7 +20,8 @@ class MyAuth:
 # openssl rand -hex 32
 SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 2
+ACCESS_TOKEN_EXPIRE_MINUTES = 15
+REFRESH_ACCESS_TOKEN_EXPIRE_DAYS = 7
 
 fake_users_db = {
     "johndoe": {
@@ -35,6 +36,7 @@ fake_users_db = {
 
 class Token(BaseModel):
     access_token: str
+    refresh_token: str | None = None
     token_type: str
 
 
@@ -101,10 +103,8 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
 
 def renew_access_token(data: dict, expires_delta: int | None = None):
     to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.now(pytz.utc) + timedelta(expires_delta)
-    else:
-        expire = datetime.now(pytz.utc) + timedelta(minutes=15)
+
+    expire = datetime.now(pytz.utc) + timedelta(minutes=15)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
