@@ -128,14 +128,17 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         username: str = payload.get("sub")
         expires = payload.get("exp")
         if username is None:
+            print('username is None')
             raise credentials_exception
         token_data = TokenData(username=username, expires=expires)
     except ExpiredSignatureError:
         raise HTTPException(status_code=403, detail="token has been expired")
     except JWTError:
+        print('JWTError')
         raise credentials_exception
     user = get_user(table_name=table_name, username=token_data.username)
     if user is None:
+        print('user is None')
         raise credentials_exception
     if datetime.now(pytz.utc) > token_data.expires:
         raise HTTPException(status_code=403, detail="token has been expired")

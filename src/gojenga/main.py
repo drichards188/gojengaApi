@@ -88,6 +88,21 @@ async def test_intercept(username: str, is_test: Optional[bool] | None = Header(
     raise HTTPException(status_code=403, detail="token has been expired")
 
 
+@app.post("/testdeposit/{username}", tags=["Deposit"])
+async def create_account(request: Request, username: str, data: Account, is_test: Optional[bool] | None = Header(default=False),
+                            current_user: User = Depends(get_current_active_user)):
+    try:
+        if Lib.detect_special_characters(username):
+            raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
+        print(username)
+        resp = AccountHandler.handle_modify_account(username.lower(), data.balance, is_test)
+        return {"response": resp}
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+
 @app.post("/login", response_model=Token, tags=["Auth"])
 async def login_for_access_token(request: Request, is_test: Optional[bool] | None = Header(default=False),
                                  form_data: OAuth2PasswordRequestForm = Depends()):
@@ -101,7 +116,7 @@ async def login_for_access_token(request: Request, is_test: Optional[bool] | Non
             table_name: str = 'users'
             if is_test:
                 table_name = 'usersTest'
-            user = authenticate_user(table_name, form_data.username, form_data.password)
+            user = authenticate_user(table_name, form_data.username.lower(), form_data.password)
             if not user:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -143,14 +158,14 @@ async def get_user(request: Request, username: str, is_test: Optional[bool] | No
     with tracer.start_as_current_span(
             "get_user",
             context=extract(request.headers),
-            attributes={'attr.username': username, 'attr.is_test': is_test},
+            attributes={'attr.username': username.lower(), 'attr.is_test': is_test},
             kind=trace.SpanKind.SERVER
     ):
         if Lib.detect_special_characters(username):
             raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
         try:
             print(f'--> the oauth user {current_user}')
-            user = UserHandler.handle_get_user(username, is_test)
+            user = UserHandler.handle_get_user(username.lower(), is_test)
             return {"response": user}
         except Exception as e:
             logger.error(e)
@@ -183,13 +198,13 @@ async def put_user(request: Request, username: str, data: User, is_test: Optiona
     with tracer.start_as_current_span(
             "put_user",
             context=extract(request.headers),
-            attributes={'username': username, 'attr.is_test': is_test},
+            attributes={'username': username.lower(), 'attr.is_test': is_test},
             kind=trace.SpanKind.SERVER
     ):
         if Lib.detect_special_characters(username):
             raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
         try:
-            resp = UserHandler.handle_update_user(username, data.password, is_test)
+            resp = UserHandler.handle_update_user(username.lower(), data.password, is_test)
             return {"response": resp}
         except Exception as e:
             logger.error(e)
@@ -202,13 +217,13 @@ async def delete_user(request: Request, username: str, is_test: Optional[bool] |
     with tracer.start_as_current_span(
             "delete_user",
             context=extract(request.headers),
-            attributes={'username': username, 'is_test': is_test},
+            attributes={'username': username.lower(), 'is_test': is_test},
             kind=trace.SpanKind.SERVER
     ):
         if Lib.detect_special_characters(username):
             raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
         try:
-            resp = UserHandler.handle_delete_user(username, is_test)
+            resp = UserHandler.handle_delete_user(username.lower(), is_test)
             return {"response": resp}
         except Exception as e:
             logger.error(e)
@@ -221,13 +236,13 @@ async def get_user(request: Request, username: str, is_test: Optional[bool] | No
     with tracer.start_as_current_span(
             "get_account",
             context=extract(request.headers),
-            attributes={'attr.username': username, 'attr.is_test': is_test},
+            attributes={'attr.username': username.lower(), 'attr.is_test': is_test},
             kind=trace.SpanKind.SERVER
     ):
         if Lib.detect_special_characters(username):
             raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
         try:
-            account = AccountHandler.handle_get_account(username, is_test)
+            account = AccountHandler.handle_get_account(username.lower(), is_test)
             return {"response": account}
         except Exception as e:
             logger.error(e)
@@ -261,13 +276,13 @@ async def put_user(request: Request, username: str, data: Account,
     with tracer.start_as_current_span(
             "put_user",
             context=extract(request.headers),
-            attributes={'username': username, 'attr.is_test': is_test},
+            attributes={'username': username.lower(), 'attr.is_test': is_test},
             kind=trace.SpanKind.SERVER
     ):
         if Lib.detect_special_characters(username):
             raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
         try:
-            resp = AccountHandler.handle_update_account(username, data.balance, is_test)
+            resp = AccountHandler.handle_update_account(username.lower(), data.balance, is_test)
             return {"response": resp}
         except Exception as e:
             logger.error(e)
@@ -280,13 +295,13 @@ async def delete_user(request: Request, username: str, is_test: Optional[bool] |
     with tracer.start_as_current_span(
             "delete_account",
             context=extract(request.headers),
-            attributes={'username': username, 'is_test': is_test},
+            attributes={'username': username.lower(), 'is_test': is_test},
             kind=trace.SpanKind.SERVER
     ):
         if Lib.detect_special_characters(username):
             raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
         try:
-            resp = AccountHandler.handle_delete_account(username, is_test)
+            resp = AccountHandler.handle_delete_account(username.lower(), is_test)
             return {"response": resp}
         except Exception as e:
             logger.error(e)
@@ -300,14 +315,15 @@ async def post_deposit(request: Request, username: str, data: Account,
     with tracer.start_as_current_span(
             "post_deposit",
             context=extract(request.headers),
-            attributes={'username': username, 'is_test': is_test},
+            attributes={'username': username.lower(), 'is_test': is_test},
             kind=trace.SpanKind.SERVER
     ):
         try:
+            # todo is_test is not being picked up
             if Lib.detect_special_characters(username):
                 raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
             print(username)
-            resp = AccountHandler.handle_modify_account(username, data.balance, is_test)
+            resp = AccountHandler.handle_modify_account(username.lower(), data.balance, is_test)
             return {"response": resp}
         except Exception as e:
             logger.error(e)
@@ -321,7 +337,7 @@ async def post_transaction(request: Request, username: str, data: Transaction,
     with tracer.start_as_current_span(
             "post_transaction",
             context=extract(request.headers),
-            attributes={'username': username, 'is_test': is_test},
+            attributes={'username': username.lower(), 'is_test': is_test},
             kind=trace.SpanKind.SERVER
     ):
         try:
@@ -342,13 +358,13 @@ async def get_portfolio(request: Request, username: str, is_test: Optional[bool]
     with tracer.start_as_current_span(
             "get_portfolio",
             context=extract(request.headers),
-            attributes={'attr.username': username, 'attr.is_test': is_test},
+            attributes={'attr.username': username.lower(), 'attr.is_test': is_test},
             kind=trace.SpanKind.SERVER
     ):
         if Lib.detect_special_characters(username):
             raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
         try:
-            account = PortfolioHandler.handle_get_portfolio(username, is_test)
+            account = PortfolioHandler.handle_get_portfolio(username.lower(), is_test)
             return {"response": account}
         except Exception as e:
             logger.error(e)
@@ -402,13 +418,13 @@ async def delete_user(request: Request, username: str, is_test: Optional[bool] |
     with tracer.start_as_current_span(
             "delete_portfolio",
             context=extract(request.headers),
-            attributes={'username': username, 'is_test': is_test},
+            attributes={'username': username.lower(), 'is_test': is_test},
             kind=trace.SpanKind.SERVER
     ):
         if Lib.detect_special_characters(username):
             raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
         try:
-            resp = PortfolioHandler.handle_delete_portfolio(username, is_test)
+            resp = PortfolioHandler.handle_delete_portfolio(username.lower(), is_test)
             return {"response": resp}
         except Exception as e:
             logger.error(e)
