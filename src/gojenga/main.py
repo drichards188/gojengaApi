@@ -87,22 +87,6 @@ async def test_intercept(username: str, is_test: Optional[bool] | None = Header(
     print(f'msg received {username} and testing is {is_test}')
     raise HTTPException(status_code=403, detail="token has been expired")
 
-
-@app.post("/testdeposit/{username}", tags=["Deposit"])
-async def create_account(request: Request, username: str, data: Account, is_test: Optional[bool] | None = Header(default=False),
-                            current_user: User = Depends(get_current_active_user)):
-    try:
-        if Lib.detect_special_characters(username):
-            raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
-        print(username)
-        resp = AccountHandler.handle_modify_account(username.lower(), data.balance, is_test)
-        return {"response": resp}
-    except Exception as e:
-        logger.error(e)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
-
-
 @app.post("/login", response_model=Token, tags=["Auth"])
 async def login_for_access_token(request: Request, is_test: Optional[bool] | None = Header(default=False),
                                  form_data: OAuth2PasswordRequestForm = Depends()):
@@ -143,7 +127,6 @@ async def renew_jwt(request: Request, jwt_token: JWT):
             kind=trace.SpanKind.SERVER
     ):
         try:
-            # todo cant decode an expired token
             token_data = Auth.get_token_payload(jwt_token.token)
             renewed_token = Auth.renew_access_token({"sub": token_data.get("sub")}, ACCESS_TOKEN_EXPIRE_MINUTES)
             return {"token": renewed_token}
@@ -319,7 +302,6 @@ async def post_deposit(request: Request, username: str, data: Account,
             kind=trace.SpanKind.SERVER
     ):
         try:
-            # todo is_test is not being picked up
             if Lib.detect_special_characters(username):
                 raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
             print(username)
