@@ -46,7 +46,7 @@ class UserHandler:
                 already_exists = UserHandler.handle_get_user(username, is_test)
                 # make sure username isn't taken
                 if already_exists:
-                    logger.error(f'error {"Username already exists"}')
+                    logger.error(f'error {"username already exists"}')
                     return {"message": "username already exists"}
 
                 hashed_password: str = get_password_hash(password)
