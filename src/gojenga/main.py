@@ -1,7 +1,6 @@
 import logging.config
 from typing import Optional
 
-from jose import jwt
 from opentelemetry.metrics import get_meter
 from fastapi import Request, Header
 from opentelemetry import trace
@@ -82,11 +81,6 @@ async def hello():
     return {"message": 'hiya'}
 
 
-@app.get("/testintercept/{username}")
-async def test_intercept(username: str, is_test: Optional[bool] | None = Header(default=False)):
-    print(f'msg received {username} and testing is {is_test}')
-    raise HTTPException(status_code=403, detail="token has been expired")
-
 @app.post("/login", response_model=Token, tags=["Auth"])
 async def login_for_access_token(request: Request, is_test: Optional[bool] | None = Header(default=False),
                                  form_data: OAuth2PasswordRequestForm = Depends()):
@@ -156,8 +150,7 @@ async def get_user(request: Request, username: str, is_test: Optional[bool] | No
 
 
 @app.post("/user", tags=["User"])
-async def post_user(request: Request, data: User, is_test: Optional[bool] | None = Header(default=False),
-                    current_user: User = Depends(get_current_active_user)):
+async def post_user(request: Request, data: User, is_test: Optional[bool] | None = Header(default=False)):
     with tracer.start_as_current_span(
             "post_user",
             context=extract(request.headers),
@@ -172,6 +165,7 @@ async def post_user(request: Request, data: User, is_test: Optional[bool] | None
             return {"response": resp}
         except Exception as e:
             logger.error(e)
+            # todo how to return original error message
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 

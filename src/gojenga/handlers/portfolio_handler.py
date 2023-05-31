@@ -58,7 +58,6 @@ class PortfolioHandler:
 
                 new_portfolio: list = original_portfolio['portfolio']
 
-                # todo handle adding more of a coin
                 for coin in portfolio.portfolio:
                     if coin.id in portfolio.portfolio:
                         coin_index = portfolio.portfolio.index(coin.id)
