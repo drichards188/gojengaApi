@@ -9,6 +9,8 @@ from opentelemetry.trace import Tracer
 
 from common.Auth import get_password_hash
 from handlers.account_handler import AccountHandler
+from handlers.portfolio_handler import PortfolioHandler
+from models.Portfolio import Portfolio
 from storage.Dynamo import Dynamo
 
 logger = logging.getLogger(__name__)
@@ -45,24 +47,29 @@ class UserHandler:
             try:
                 already_exists = UserHandler.handle_get_user(username, is_test)
                 # make sure username isn't taken
-                if already_exists:
+                if already_exists["message"] == 'item not found':
+                    hashed_password: str = get_password_hash(password)
+
+                    resp = Dynamo.create_item(table_name, {'name': username,
+                                                           'password': hashed_password})
+
+                    # todo orchestrate and rollback. if one fails the rollback
+                    ledger_resp = AccountHandler.handle_create_account(username, Decimal('0.00'), is_test)
+                    default_portfolio: Portfolio = Portfolio(name=username, portfolio=[
+                        {"name": "litecoin", "amount": 1, "id": "litecoin"}])
+                    portfolio_resp = PortfolioHandler.handle_create_portfolio(username, default_portfolio, is_test)
+
+                    # todo remove hardcoded access token
+                    if resp and ledger_resp and portfolio_resp:
+                        return {
+                            "user": username,
+                            "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+                            "token_type": "bearer"}
+                    else:
+                        return resp
+                else:
                     logger.error(f'error {"username already exists"}')
                     return {"message": "username already exists"}
-
-                hashed_password: str = get_password_hash(password)
-
-                resp = Dynamo.create_item(table_name, {'name': username,
-                                                       'password': hashed_password})
-
-                ledger_resp = AccountHandler.handle_create_account(username, Decimal('0.00'), is_test)
-
-                if resp and ledger_resp:
-                    return {
-                        "user": username,
-                        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
-                        "token_type": "bearer"}
-                else:
-                    return resp
             except Exception as e:
                 logger.error(f'error {e}')
                 raise ValueError(e)
