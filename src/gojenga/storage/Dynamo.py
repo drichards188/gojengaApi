@@ -25,11 +25,13 @@ class Dynamo:
                     return response['Item']
                 else:
                     logger.error('item not found')
-                    raise ValueError(f'item not found {query}')
+                    return {'message': 'item not found'}
+                    # raise ValueError(f'item not found {query}')
             except ClientError as e:
                 logger.error(
                     f"{e.response['Error']['Code'], e.response['Error']['Message']}")
                 raise Exception(f"dynamo error {e.response['Error']['Code']} and msg {e.response['Error']['Message']}")
+
 
     @staticmethod
     def create_item(table_name: str, item: dict | Portfolio) -> str:
@@ -48,6 +50,7 @@ class Dynamo:
                 logger.error(
                     f"{e.response['Error']['Code'], e.response['Error']['Message']}")
                 raise Exception(f"dynamo error {e.response['Error']['Code']} and msg {e.response['Error']['Message']}")
+
 
     @staticmethod
     def delete_item(table_name: str, item: dict) -> str:
