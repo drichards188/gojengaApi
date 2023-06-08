@@ -62,13 +62,15 @@ class PortfolioHandler:
                     print(f'coin is: {coin}')
                     print(f'coin id is: {coin["id"]}')
                     coin_id = coin["id"]
-                    found_coins = [item for item in original_portfolio if item.get('id') == coin_id]
+                    found_coins = [item for item in new_portfolio if item.get('id') == coin_id]
                     # this section modifies existing quantity of coin already in portfolio. but shouldn't work because it doesn't update new_portfolio
                     # todo seperate display coins and coins in portfolio in redux
                     if len(found_coins) > 0:
-                        coin_index = coin_portfolio[0].index(coin_id)
-                        coin_portfolio[coin_index] = coin
-                    new_portfolio.append(coin)
+                        coin_index = new_portfolio.index(found_coins[0])
+                        # overwrite existing coin with updated quantity
+                        new_portfolio[coin_index] = coin
+                    else:
+                        new_portfolio.append(coin)
 
                 resp = Dynamo.create_item(table_name, {'name': portfolio.username, 'portfolio': new_portfolio})
                 return resp
