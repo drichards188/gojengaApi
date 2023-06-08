@@ -38,7 +38,7 @@ class PortfolioHandler:
             if is_test:
                 table_name = 'portfolioTest'
             try:
-                resp = Dynamo.create_item(table_name, {'name': portfolio.name, 'portfolio': portfolio.portfolio})
+                resp = Dynamo.create_item(table_name, {'name': portfolio.username, 'portfolio': portfolio.portfolio})
                 return resp
             except Exception as e:
                 logger.info(f'error {e}')
@@ -57,14 +57,20 @@ class PortfolioHandler:
                 original_portfolio = PortfolioHandler.handle_get_portfolio(username, is_test)
 
                 new_portfolio: list = original_portfolio['portfolio']
-
-                for coin in portfolio.portfolio:
-                    if coin.id in portfolio.portfolio:
-                        coin_index = portfolio.portfolio.index(coin.id)
-                        portfolio.portfolio[coin_index] = coin
+                coin_portfolio = portfolio.portfolio
+                for coin in coin_portfolio:
+                    print(f'coin is: {coin}')
+                    print(f'coin id is: {coin["id"]}')
+                    coin_id = coin["id"]
+                    found_coins = [item for item in original_portfolio if item.get('id') == coin_id]
+                    # this section modifies existing quantity of coin already in portfolio. but shouldn't work because it doesn't update new_portfolio
+                    # todo seperate display coins and coins in portfolio in redux
+                    if len(found_coins) > 0:
+                        coin_index = coin_portfolio[0].index(coin_id)
+                        coin_portfolio[coin_index] = coin
                     new_portfolio.append(coin)
 
-                resp = Dynamo.create_item(table_name, {'name': portfolio.name, 'portfolio': new_portfolio})
+                resp = Dynamo.create_item(table_name, {'name': portfolio.username, 'portfolio': new_portfolio})
                 return resp
             except Exception as e:
                 logger.info(f'error {e}')
