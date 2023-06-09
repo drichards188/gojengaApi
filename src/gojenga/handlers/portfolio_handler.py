@@ -60,7 +60,7 @@ class PortfolioHandler:
                 new_portfolio: list = original_portfolio['portfolio']
                 coin_portfolio = portfolio.portfolio
                 for coin in coin_portfolio:
-                    coin["quantity"] = Decimal(coin["quantity"])
+                    coin["amount"] = Decimal(coin["amount"])
                     print(f'coin is: {coin}')
                     print(f'coin id is: {coin["id"]}')
                     coin_id = coin["id"]
