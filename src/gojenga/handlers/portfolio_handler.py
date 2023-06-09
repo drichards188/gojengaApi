@@ -1,5 +1,6 @@
 import logging
 from typing import List
+from decimal import *
 
 from opentelemetry import trace
 
@@ -59,6 +60,7 @@ class PortfolioHandler:
                 new_portfolio: list = original_portfolio['portfolio']
                 coin_portfolio = portfolio.portfolio
                 for coin in coin_portfolio:
+                    coin["quantity"] = Decimal(coin["quantity"])
                     print(f'coin is: {coin}')
                     print(f'coin id is: {coin["id"]}')
                     coin_id = coin["id"]
