@@ -4,6 +4,6 @@ from pydantic import BaseModel
 
 
 class Portfolio(BaseModel):
-    name: str
+    username: str
     portfolio: list[object]
 
