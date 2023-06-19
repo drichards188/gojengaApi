@@ -1,5 +1,5 @@
 import logging.config
-from typing import Optional
+from typing import Optional, Annotated
 
 from opentelemetry.metrics import get_meter
 from fastapi import Request, Header
@@ -13,7 +13,8 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from starlette.middleware.cors import CORSMiddleware
 
 from common import Auth
-from common.Auth import MyAuth, ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_ACCESS_TOKEN_EXPIRE_DAYS, create_access_token, get_current_active_user, \
+from common.Auth import MyAuth, ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_ACCESS_TOKEN_EXPIRE_DAYS, create_access_token, \
+    get_current_active_user, \
     authenticate_user, Token
 from common.Lib import Lib
 from handlers.account_handler import AccountHandler
@@ -369,6 +370,7 @@ async def post_account(request: Request, data: Portfolio, is_test: Optional[bool
 
 @app.put("/portfolio/{username}", tags=["Portfolio"])
 async def put_user(request: Request, username: str, data: Portfolio,
+                    update_type: Optional[str] = Header(None),
                    is_test: Optional[bool] | None = Header(default=False),
                    current_user: User = Depends(get_current_active_user)):
     with tracer.start_as_current_span(
@@ -381,7 +383,7 @@ async def put_user(request: Request, username: str, data: Portfolio,
             if Lib.detect_special_characters(data.username):
                 raise HTTPException(status_code=status.HTTP_206_PARTIAL_CONTENT, detail='please send legal username')
 
-            resp = PortfolioHandler.handle_update_portfolio(data.username, data, is_test)
+            resp = PortfolioHandler.handle_update_portfolio(data.username, data, is_test, update_type)
             return {"response": resp}
         except Exception as e:
             logger.error(e)

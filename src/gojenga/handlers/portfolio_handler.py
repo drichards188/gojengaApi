@@ -46,7 +46,7 @@ class PortfolioHandler:
                 raise ValueError(e)
 
     @staticmethod
-    def handle_update_portfolio(username: str, portfolio: Portfolio, is_test: bool) -> str:
+    def handle_update_portfolio(username: str, portfolio: Portfolio, is_test: bool, update_type: str) -> str:
         with tracer.start_as_current_span(
                 "handle_create_portfolio",
                 attributes={'username': username, 'attr.is_test': is_test}
@@ -55,24 +55,32 @@ class PortfolioHandler:
             if is_test:
                 table_name = 'portfolioTest'
             try:
-                original_portfolio = PortfolioHandler.handle_get_portfolio(username, is_test)
 
+                original_portfolio = PortfolioHandler.handle_get_portfolio(username, is_test)
                 new_portfolio: list = original_portfolio['portfolio']
                 coin_portfolio = portfolio.portfolio
-                for coin in coin_portfolio:
-                    coin["amount"] = Decimal(coin["amount"])
-                    print(f'coin is: {coin}')
-                    print(f'coin id is: {coin["id"]}')
-                    coin_id = coin["id"]
-                    found_coins = [item for item in new_portfolio if item.get('id') == coin_id]
-                    # this section modifies existing quantity of coin already in portfolio. but shouldn't work because it doesn't update new_portfolio
-                    # todo seperate display coins and coins in portfolio in redux
-                    if len(found_coins) > 0:
-                        coin_index = new_portfolio.index(found_coins[0])
-                        # overwrite existing coin with updated quantity
-                        new_portfolio[coin_index] = coin
-                    else:
-                        new_portfolio.append(coin)
+
+                if update_type == 'buy':
+                    # I believe this logic only adds coins. it doesn't subtract or sell coins
+
+                    for coin in coin_portfolio:
+                        coin["amount"] = Decimal(coin["amount"])
+                        print(f'coin is: {coin}')
+                        print(f'coin id is: {coin["id"]}')
+                        coin_id = coin["id"]
+                        found_coins = [item for item in new_portfolio if item.get('id') == coin_id]
+                        # this section modifies existing quantity of coin already in portfolio. but shouldn't work because it doesn't update new_portfolio
+                        if len(found_coins) > 0:
+                            coin_index = new_portfolio.index(found_coins[0])
+                            # overwrite existing coin with updated quantity
+                            new_portfolio[coin_index] = coin
+                        else:
+                            new_portfolio.append(coin)
+
+                elif update_type == 'sell':
+                    coin_id = coin_portfolio[0]["id"]
+
+                    new_portfolio = [coin for coin in new_portfolio if coin["id"] != coin_id]
 
                 resp = Dynamo.create_item(table_name, {'name': portfolio.username, 'portfolio': new_portfolio})
                 return resp
