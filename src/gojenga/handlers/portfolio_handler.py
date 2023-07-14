@@ -55,13 +55,11 @@ class PortfolioHandler:
             if is_test:
                 table_name = 'portfolioTest'
             try:
-
                 original_portfolio = PortfolioHandler.handle_get_portfolio(username, is_test)
                 new_portfolio: list = original_portfolio['portfolio']
-                coin_portfolio = portfolio.portfolio
+                coin_portfolio: list[object] = portfolio.portfolio
 
                 if update_type == 'buy':
-                    # I believe this logic only adds coins. it doesn't subtract or sell coins
 
                     for coin in coin_portfolio:
                         coin["amount"] = Decimal(coin["amount"])
@@ -69,7 +67,8 @@ class PortfolioHandler:
                         print(f'coin id is: {coin["id"]}')
                         coin_id = coin["id"]
                         found_coins = [item for item in new_portfolio if item.get('id') == coin_id]
-                        # this section modifies existing quantity of coin already in portfolio. but shouldn't work because it doesn't update new_portfolio
+                        # this section modifies existing quantity of coin already in portfolio
+
                         if len(found_coins) > 0:
                             coin_index = new_portfolio.index(found_coins[0])
                             # overwrite existing coin with updated quantity
