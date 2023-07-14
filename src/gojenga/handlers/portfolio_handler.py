@@ -60,6 +60,7 @@ class PortfolioHandler:
                 coin_portfolio: list[object] = portfolio.portfolio
 
                 if update_type == 'buy':
+
                     for coin in coin_portfolio:
                         coin["amount"] = Decimal(coin["amount"])
                         print(f'coin is: {coin}')
@@ -67,6 +68,7 @@ class PortfolioHandler:
                         coin_id = coin["id"]
                         found_coins = [item for item in new_portfolio if item.get('id') == coin_id]
                         # this section modifies existing quantity of coin already in portfolio
+
                         if len(found_coins) > 0:
                             coin_index = new_portfolio.index(found_coins[0])
                             # overwrite existing coin with updated quantity

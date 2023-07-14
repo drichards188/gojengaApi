@@ -1,5 +1,5 @@
 import logging.config
-from typing import Optional
+from typing import Optional, Annotated
 
 from opentelemetry.metrics import get_meter
 from fastapi import Request, Header
