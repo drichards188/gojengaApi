@@ -1,6 +1,5 @@
 import logging.config
 from typing import Optional, Annotated
-from mangum import Mangum
 from opentelemetry.metrics import get_meter
 from fastapi import Request, Header
 from opentelemetry import trace
@@ -415,4 +414,3 @@ async def delete_user(request: Request, username: str, is_test: Optional[bool] |
 
 
 FastAPIInstrumentor.instrument_app(app)
-handler = Mangum(app=app)
