@@ -1,6 +1,5 @@
 import logging.config
 from typing import Optional, Annotated
-
 from opentelemetry.metrics import get_meter
 from fastapi import Request, Header
 from opentelemetry import trace
@@ -75,6 +74,11 @@ app.add_middleware(
 )
 
 my_auth: MyAuth = MyAuth()
+
+
+@app.get("/", tags=["Root"])
+async def root():
+    return {"message": "You have reached Gojenga"}
 
 
 @app.get("/hello", tags=["Debug"])
@@ -370,7 +374,7 @@ async def post_account(request: Request, data: Portfolio, is_test: Optional[bool
 
 @app.put("/portfolio/{username}", tags=["Portfolio"])
 async def put_user(request: Request, username: str, data: Portfolio,
-                    update_type: Optional[str] = Header(None),
+                   update_type: Optional[str] = Header(None),
                    is_test: Optional[bool] | None = Header(default=False),
                    current_user: User = Depends(get_current_active_user)):
     with tracer.start_as_current_span(
